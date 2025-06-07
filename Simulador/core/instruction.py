@@ -1,4 +1,32 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
 from enum import Enum, auto
+
+"""
+Class: InstructionType
+Enumeración que define los tipos de instrucciones soportados por el simulador.
+
+Attributes:
+(No aplica, es una enumeración)
+
+Constructor:
+(No aplica)
+
+Methods:
+(No aplica)
+
+Example:
+    tipo = InstructionType.R_TYPE
+"""
 
 class InstructionType(Enum):
     R_TYPE = auto()
@@ -8,9 +36,46 @@ class InstructionType(Enum):
     J_TYPE = auto()
     INVALID = auto()
 
-# Esta clase representa una instrucción individual en el simulador.
+"""
+Class: Instruction
+Clase que representa una instrucción individual en el simulador, permitiendo su decodificación y análisis.
+
+Attributes:
+- raw_text: str - texto original de la instrucción.
+- address: int - dirección de memoria (PC) donde se encuentra la instrucción.
+- opcode: str o None - operación principal de la instrucción.
+- operands: list - lista de operandos (registros o valores inmediatos).
+- type: InstructionType - tipo de instrucción según el opcode.
+- rd: str o None - registro destino (si aplica).
+- rs1: str o None - primer registro fuente (si aplica).
+- rs2: str o None - segundo registro fuente (si aplica).
+- imm: int o None - valor inmediato (si aplica).
+
+Constructor:
+- __init__: Recibe el texto crudo de la instrucción y su dirección, inicializa y decodifica los campos.
+
+Methods:
+- _parse_instruction: Decodifica la instrucción y llena los campos según el opcode.
+- __str__: Devuelve una representación textual de la instrucción con su dirección.
+- is_valid: Indica si la instrucción es válida o no.
+
+Example:
+    instr = Instruction("add x1, x2, x3", 0)
+    print(instr.rd)  # Imprime: x1
+    print(instr)     # Imprime la instrucción con dirección
+"""
+
 class Instruction:
     def __init__(self, raw_text: str, address: int):
+        """
+        Function: __init__
+        Inicializa una instrucción, decodificando sus campos a partir del texto y la dirección.
+        Params:
+        - raw_text: str - texto original de la instrucción.
+        - address: int - dirección de memoria (PC) de la instrucción.
+        Example:
+            instr = Instruction("addi x1, x2, 10", 4)
+        """
         self.raw_text = raw_text.strip() # Línea original
         self.address = address  # Dirección en memoria (PC)
         self.opcode = None
@@ -25,9 +90,17 @@ class Instruction:
 
         self._parse_instruction()
 
-    # Método que hace el parsing según el opcode
-    # esto espera que el texto ya esté validado en el futuro parser principal (parser.py)
     def _parse_instruction(self):
+        """
+        Function: _parse_instruction
+        Decodifica la instrucción y llena los campos según el opcode.
+        Params:
+        (Sin parámetros)
+        Restriction:
+        El texto debe estar validado y en formato correcto.
+        Example:
+            self._parse_instruction()
+        """
         if not self.raw_text:
             return
 
@@ -75,10 +148,26 @@ class Instruction:
 
         else:
             self.type = InstructionType.INVALID
-    # sirve para imprimir la instrucción con su dirección en hexadecimal
+
     def __str__(self):
+        """
+        Function: __str__
+        Devuelve una representación textual de la instrucción con su dirección en hexadecimal.
+        Returns:
+        - str: representación de la instrucción.
+        Example:
+            print(instr)
+        """
         return f"[{self.address:#04x}] {self.raw_text}"
 
-    # Verifica si la instrucción es válida
     def is_valid(self):
+        """
+        Function: is_valid
+        Indica si la instrucción es válida (no es de tipo INVALID).
+        Returns:
+        - bool: True si la instrucción es válida, False en caso contrario.
+        Example:
+            if instr.is_valid():
+                ...
+        """
         return self.type != InstructionType.INVALID

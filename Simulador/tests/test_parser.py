@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para el parser de instrucciones, validando el reconocimiento de etiquetas,
+la cantidad de instrucciones y la correcta decodificación de los opcodes.
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -5,6 +21,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from IO.parser import Parser
 
 def test_simple_program():
+    """
+    Function: test_simple_program
+    Prueba el parser con un programa simple que incluye etiquetas y diferentes tipos de instrucciones.
+    Example:
+        test_simple_program()
+    """
     program = [
         "start: add x1, x0, x0",
         "addi x2, x1, 10",
