@@ -6,39 +6,52 @@ class Parser:
         self.labels = {}        # Diccionario de etiquetas a direcciones
 
     def parse(self, lines: list[str], base_address=0) -> list[Instruction]:
-        """
-        Parsea una lista de líneas en RISC-V assembly.
-        Devuelve una lista de instrucciones con sus direcciones.
-        """
         self.instructions = []
         self.labels = {}
 
-        # Primera pasada: detectar etiquetas y guarda dirección asociada
-        # aun no crea instrucciones todavía
+        # Primera pasada: registrar etiquetas
         current_address = base_address
         for line in lines:
             clean_line = self._clean_line(line)
             if not clean_line:
                 continue
             if ":" in clean_line:
-                label = clean_line.replace(":", "").strip()
+                label = clean_line.split(":")[0].strip()
                 self.labels[label] = current_address
             else:
                 current_address += 4
 
-        # Segunda pasada: procesar instrucciones válidas
-        # sustituye etiquetdas por desplazamientos relativos si son saltos
+                # Segunda pasada: construir instrucciones
         current_address = base_address
         for line in lines:
             clean_line = self._clean_line(line)
-            if not clean_line or ":" in clean_line:
+            if not clean_line:
                 continue
-            # Reemplazar etiquetas en ramas o saltos
+
+            if ":" in clean_line:
+                # Línea con etiqueta e instrucción
+                label_part, instr_part = clean_line.split(":", 1)
+                clean_line = instr_part.strip()
+                if not clean_line:
+                    continue  # La línea solo tenía una etiqueta
+            else:
+                # Línea sin etiqueta
+                pass  # clean_line ya está listo
+
             tokens = clean_line.split()
-            if tokens[0] in {"beq", "bne", "jal"} and tokens[-1] in self.labels:
-                label = tokens[-1]
-                offset = self.labels[label] - current_address
-                clean_line = " ".join(tokens[:-1] + [str(offset)])
+
+            # Reemplazo de etiquetas si es necesario
+            if tokens[0] in {"beq", "bne", "jal"}:
+                label_or_imm = tokens[-1]
+                try:
+                    int(label_or_imm)
+                except ValueError:
+                    if label_or_imm in self.labels:
+                        offset = self.labels[label_or_imm] - current_address
+                        tokens[-1] = str(offset)
+                        clean_line = " ".join(tokens)
+                    else:
+                        raise ValueError(f"Etiqueta no encontrada: {label_or_imm}")
 
             instr = Instruction(clean_line, current_address)
             self.instructions.append(instr)
