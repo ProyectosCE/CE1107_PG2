@@ -3,6 +3,7 @@ from core.stage_if import InstructionFetch
 from core.stage_id import InstructionDecode
 from core.stage_ex import ExecuteStage
 from core.stage_mem import MemoryAccessStage
+from core.stage_wb import WriteBackStage
 from components.register_file import RegisterFile
 from components.memory import Memory
 from core.instruction import Instruction
@@ -10,16 +11,16 @@ from core.instruction import Instruction
 
 class Processor:
     def __init__(self):
-        self.instr_mem = Memory(size_in_words=64)  # Memoria de instrucciones
-        self.data_mem = Memory(size_in_words=64)   # Memoria de datos
+        self.instr_mem = Memory(size_in_words=64)
+        self.data_mem = Memory(size_in_words=64)
         self.pipeline = Pipeline()
 
-        # Etapas del pipeline
         self.if_stage = InstructionFetch(self.instr_mem)
         self.registers = RegisterFile()
         self.id_stage = InstructionDecode(self.registers)
         self.ex_stage = ExecuteStage()
         self.mem_stage = MemoryAccessStage(self.data_mem)
+        self.wb_stage = WriteBackStage(self.registers)
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):
@@ -36,27 +37,30 @@ class Processor:
             self.data_mem.store_word(addr, val)
 
     def run(self):
-        print(" Iniciando simulación del procesador (IF → ID → EX → MEM)...\n")
+        print("Iniciando simulación del procesador (IF → ID → EX → MEM → WB)...\n")
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
-            # 1. Instruction Fetch
+            # 1. IF
             fetched = self.if_stage.fetch()
             instr = fetched["instr"]
             pc = fetched["pc"]
             self.pipeline.step(instr, pc)
 
-            # 2. Instruction Decode
+            # 2. ID
             if_id = self.pipeline.IF_ID
             id_ex = self.id_stage.decode(if_id)
 
-            # 3. Execute
+            # 3. EX
             ex_mem = self.ex_stage.execute(id_ex)
 
-            # 4. Memory Access
+            # 4. MEM
             mem_wb = self.mem_stage.access(ex_mem)
 
-            # 5. Imprimir estado del ciclo
+            # 5. WB
+            self.wb_stage.write_back(mem_wb)
+
+            # 6. Imprimir ciclo
             print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
             print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
 
