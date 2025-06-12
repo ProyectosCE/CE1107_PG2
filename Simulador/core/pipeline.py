@@ -143,3 +143,26 @@ class Pipeline:
             ciclos = pipe.get_cycle()
         """
         return self.cycles
+
+    def insert_stall(self):
+        """
+        Inserta una burbuja (NOP) en la etapa ID/EX sin avanzar la instrucción en IF/ID.
+        Usado típicamente para resolver un load-use hazard.
+        """
+        nop = self._create_nop_instruction()
+
+        self.cycles += 1
+
+        self.MEM_WB = self.EX_MEM
+        self.EX_MEM = self.ID_EX
+        self.ID_EX = {
+            "instr": nop,
+            "pc": self.IF_ID["pc"],
+            "rd": None,
+            "rs1": None,
+            "rs2": None,
+            "rs1_val": None,
+            "rs2_val": None,
+            "imm": None
+        }
+        # IF_ID no se modifica → mismo fetch, se repite la instrucción
