@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para la clase BranchPredictor, validando la predicción por defecto,
+la actualización de la predicción, y la detección de necesidad de flush por predicción errónea.
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -5,6 +21,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from components.branch_predictor import BranchPredictor
 
 def test_default_prediction():
+    """
+    Function: test_default_prediction
+    Prueba que la predicción por defecto sea "no tomado" para cualquier PC no registrado.
+    Example:
+        test_default_prediction()
+    """
     print("Test: predicción por defecto (no tomado)")
     bp = BranchPredictor()
     pc = 0x100
@@ -14,6 +36,12 @@ def test_default_prediction():
     print("Predicción por defecto (not taken) pasó correctamente.")
 
 def test_prediction_update_taken():
+    """
+    Function: test_prediction_update_taken
+    Prueba que la actualización de la predicción a "tomado" funcione correctamente.
+    Example:
+        test_prediction_update_taken()
+    """
     print("🔧 Test: actualización de predicción a tomado")
     bp = BranchPredictor()
     pc = 0x104
@@ -24,6 +52,12 @@ def test_prediction_update_taken():
     print("Predicción tomada actualizada correctamente.")
 
 def test_prediction_update_not_taken():
+    """
+    Function: test_prediction_update_not_taken
+    Prueba que la actualización de la predicción a "no tomado" funcione correctamente.
+    Example:
+        test_prediction_update_not_taken()
+    """
     print("🔧 Test: actualización de predicción a no tomado")
     bp = BranchPredictor()
     pc = 0x108
@@ -34,6 +68,12 @@ def test_prediction_update_not_taken():
     print("Predicción no tomada actualizada correctamente.")
 
 def test_flush_required_on_mispredict():
+    """
+    Function: test_flush_required_on_mispredict
+    Prueba la detección de la necesidad de flush cuando hay una predicción errónea.
+    Example:
+        test_flush_required_on_mispredict()
+    """
     print("Test: detección de flush por predicción errónea")
     bp = BranchPredictor()
     pc = 0x10C

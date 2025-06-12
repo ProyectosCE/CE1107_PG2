@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para la clase HazardUnit, validando la detección de hazards de tipo load-use,
+el forwarding desde EX/MEM y MEM/WB, y el correcto manejo de registros especiales como x0.
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -6,6 +22,12 @@ from components.hazard_unit import HazardUnit
 from core.instruction import Instruction
 
 def test_no_hazard():
+    """
+    Function: test_no_hazard
+    Prueba que no se detecten hazards ni forwarding cuando no hay dependencias.
+    Example:
+        test_no_hazard()
+    """
     print("Test: sin hazards")
     hu = HazardUnit()
 
@@ -26,6 +48,12 @@ def test_no_hazard():
     print("Test sin hazards pasó.")
 
 def test_load_use_hazard():
+    """
+    Function: test_load_use_hazard
+    Prueba la detección de un hazard tipo load-use que requiere stall.
+    Example:
+        test_load_use_hazard()
+    """
     print("Test: load-use hazard (stall)")
     hu = HazardUnit()
 
@@ -43,6 +71,12 @@ def test_load_use_hazard():
     print("Test load-use hazard (stall) pasó.")
 
 def test_forward_from_ex():
+    """
+    Function: test_forward_from_ex
+    Prueba el forwarding desde la etapa EX/MEM cuando hay dependencia de datos.
+    Example:
+        test_forward_from_ex()
+    """
     print("Test: forwarding desde EX/MEM")
     hu = HazardUnit()
 
@@ -64,6 +98,12 @@ def test_forward_from_ex():
     print("Test forwarding desde EX/MEM pasó.")
 
 def test_forward_from_mem():
+    """
+    Function: test_forward_from_mem
+    Prueba el forwarding desde la etapa MEM/WB cuando hay dependencia de datos.
+    Example:
+        test_forward_from_mem()
+    """
     print("Test: forwarding desde MEM/WB")
     hu = HazardUnit()
 
@@ -82,6 +122,12 @@ def test_forward_from_mem():
     print("Test forwarding desde MEM/WB pasó.")
 
 def test_ignore_x0():
+    """
+    Function: test_ignore_x0
+    Prueba que los registros x0 sean ignorados en la detección de hazards y forwarding.
+    Example:
+        test_ignore_x0()
+    """
     print("Test: ignorar registros x0")
     hu = HazardUnit()
 

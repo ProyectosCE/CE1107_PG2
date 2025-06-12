@@ -18,6 +18,7 @@ from core.stage_wb import WriteBackStage
 from components.register_file import RegisterFile
 from components.memory import Memory
 from components.hazard_unit import HazardUnit
+from components.branch_predictor import BranchPredictor
 from core.instruction import Instruction
 
 class Processor:
@@ -34,6 +35,7 @@ class Processor:
         self.wb_stage = WriteBackStage(self.registers)
 
         self.hazard_unit = HazardUnit()
+        self.branch_predictor = BranchPredictor()
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):

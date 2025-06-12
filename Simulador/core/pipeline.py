@@ -166,3 +166,20 @@ class Pipeline:
             "imm": None
         }
         # IF_ID no se modifica → mismo fetch, se repite la instrucción
+        def flush(self):
+            """
+            Limpia las etapas IF/ID e ID/EX para anular instrucciones mal predichas (por ejemplo, en saltos).
+            """
+            nop = self._create_nop_instruction()
+
+            self.IF_ID = {"instr": nop, "pc": 0}
+            self.ID_EX = {
+                "instr": nop,
+                "pc": 0,
+                "rd": None,
+                "rs1": None,
+                "rs2": None,
+                "rs1_val": None,
+                "rs2_val": None,
+                "imm": None
+            }

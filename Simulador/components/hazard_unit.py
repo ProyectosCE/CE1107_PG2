@@ -1,8 +1,54 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Class: HazardUnit
+Clase que implementa la unidad de detección y resolución de hazards en el pipeline, gestionando stalls.
+
+Attributes:
+(No tiene atributos propios, es una clase de utilidad por método.)
+
+Constructor:
+- __init__: Inicializa la instancia de la unidad de hazards.
+
+Methods:
+- detect_hazard: Detecta hazards de tipo load-use y determina si es necesario hacer stall.
+
+Example:
+    hazard = HazardUnit()
+    resultado = hazard.detect_hazard(if_id, id_ex, ex_mem, mem_wb)
+"""
+
 class HazardUnit:
     def __init__(self):
+        """
+        Function: __init__
+        Inicializa la instancia de la unidad de hazards.
+        """
         pass
 
     def detect_hazard(self, if_id: dict, id_ex: dict, ex_mem: dict, mem_wb: dict) -> dict:
+        """
+        Function: detect_hazard
+        Detecta hazards de tipo load-use y determina si es necesario hacer stall o forwarding.
+        Params:
+        - if_id: dict - registro IF/ID del pipeline.
+        - id_ex: dict - registro ID/EX del pipeline.
+        - ex_mem: dict - registro EX/MEM del pipeline.
+        - mem_wb: dict - registro MEM/WB del pipeline.
+        Returns:
+        - dict: contiene 'stall' (bool) y 'forward' (dict con claves 'rs1' y 'rs2').
+        Example:
+            resultado = hazard.detect_hazard(if_id, id_ex, ex_mem, mem_wb)
+        """
         stall = False
         forward = {'rs1': None, 'rs2': None}
 
