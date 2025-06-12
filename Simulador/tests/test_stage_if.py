@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para la etapa de búsqueda de instrucciones (IF) del pipeline,
+validando la correcta obtención de instrucciones y avance del PC.
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -7,6 +23,12 @@ from components.memory import Memory
 from core.instruction import Instruction
 
 def test_instruction_fetch():
+    """
+    Function: test_instruction_fetch
+    Prueba la etapa IF verificando la obtención secuencial de instrucciones y el avance del PC.
+    Example:
+        test_instruction_fetch()
+    """
     print("Probando Instruction Fetch...")
 
     # Crear memoria con instrucciones

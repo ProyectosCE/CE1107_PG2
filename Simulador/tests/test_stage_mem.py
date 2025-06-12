@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para la etapa de acceso a memoria (MEM) del pipeline,
+validando operaciones de carga (lw) y almacenamiento (sw).
+"""
+
 import sys
 import os
 
@@ -8,6 +24,12 @@ from components.memory import Memory
 from core.instruction import Instruction
 
 def test_lw_access():
+    """
+    Function: test_lw_access
+    Prueba la operación de carga (lw) en la etapa MEM.
+    Example:
+        test_lw_access()
+    """
     mem = Memory()
     mem.store_word(12, 999)
 
@@ -26,6 +48,12 @@ def test_lw_access():
     print("Test lw pasó correctamente.")
 
 def test_sw_access():
+    """
+    Function: test_sw_access
+    Prueba la operación de almacenamiento (sw) en la etapa MEM.
+    Example:
+        test_sw_access()
+    """
     mem = Memory()
     stage = MemoryAccessStage(mem)
 

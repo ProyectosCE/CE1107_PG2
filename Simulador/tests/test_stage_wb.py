@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para la etapa de escritura final (WB) del pipeline,
+validando la correcta escritura en el banco de registros y el comportamiento ante instrucciones que no deben escribir.
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -7,6 +23,12 @@ from components.register_file import RegisterFile
 from core.instruction import Instruction
 
 def test_writeback_lw():
+    """
+    Function: test_writeback_lw
+    Prueba la escritura de un valor cargado desde memoria (lw) en el banco de registros.
+    Example:
+        test_writeback_lw()
+    """
     rf = RegisterFile()
     wb = WriteBackStage(rf)
 
@@ -22,6 +44,12 @@ def test_writeback_lw():
     print("Test lw pasó correctamente.")
 
 def test_writeback_add():
+    """
+    Function: test_writeback_add
+    Prueba la escritura del resultado de una operación aritmética (add) en el banco de registros.
+    Example:
+        test_writeback_add()
+    """
     rf = RegisterFile()
     wb = WriteBackStage(rf)
 
@@ -37,6 +65,12 @@ def test_writeback_add():
     print("Test add pasó correctamente.")
 
 def test_writeback_sw_ignored():
+    """
+    Function: test_writeback_sw_ignored
+    Prueba que una instrucción sw no escriba en el banco de registros.
+    Example:
+        test_writeback_sw_ignored()
+    """
     rf = RegisterFile()
     rf.write("x3", 777)
 

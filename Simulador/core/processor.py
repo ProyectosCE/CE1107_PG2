@@ -1,3 +1,14 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
 from core.pipeline import Pipeline
 from core.stage_if import InstructionFetch
 from core.stage_id import InstructionDecode
@@ -8,9 +19,42 @@ from components.register_file import RegisterFile
 from components.memory import Memory
 from core.instruction import Instruction
 
+"""
+Class: Processor
+Clase que representa el procesador completo con pipeline, memoria, registros y etapas de ejecución.
+
+Attributes:
+- instr_mem: Memory - memoria de instrucciones.
+- data_mem: Memory - memoria de datos.
+- pipeline: Pipeline - objeto que gestiona el avance de instrucciones por las etapas.
+- if_stage: InstructionFetch - etapa IF.
+- registers: RegisterFile - banco de registros.
+- id_stage: InstructionDecode - etapa ID.
+- ex_stage: ExecuteStage - etapa EX.
+- mem_stage: MemoryAccessStage - etapa MEM.
+- wb_stage: WriteBackStage - etapa WB.
+
+Constructor:
+- __init__: Inicializa todas las memorias, registros y etapas del procesador.
+
+Methods:
+- load_program: Carga un programa (lista de instrucciones) en la memoria de instrucciones.
+- preload_registers: Precarga valores en los registros.
+- preload_data_memory: Precarga valores en la memoria de datos.
+- run: Ejecuta el ciclo completo del pipeline hasta vaciarlo, mostrando el estado de cada etapa en cada ciclo.
+
+Example:
+    cpu = Processor()
+    cpu.load_program(["add x1, x2, x3", "addi x4, x1, 5"])
+    cpu.run()
+"""
 
 class Processor:
     def __init__(self):
+        """
+        Function: __init__
+        Inicializa el procesador, sus memorias, registros y etapas del pipeline.
+        """
         self.instr_mem = Memory(size_in_words=64)
         self.data_mem = Memory(size_in_words=64)
         self.pipeline = Pipeline()
@@ -23,20 +67,50 @@ class Processor:
         self.wb_stage = WriteBackStage(self.registers)
 
     def load_program(self, instr_list: list[str]):
+        """
+        Function: load_program
+        Carga una lista de instrucciones (en texto) en la memoria de instrucciones.
+        Params:
+        - instr_list: list[str] - lista de instrucciones en texto.
+        Example:
+            cpu.load_program(["add x1, x2, x3"])
+        """
         for i, line in enumerate(instr_list):
             pc = i * 4
             instr = Instruction(line, pc)
             self.instr_mem.store_word(pc, instr)
 
     def preload_registers(self, values: dict):
+        """
+        Function: preload_registers
+        Precarga valores en los registros antes de la simulación.
+        Params:
+        - values: dict - diccionario {registro: valor}.
+        Example:
+            cpu.preload_registers({"x1": 10, "x2": 20})
+        """
         for reg, val in values.items():
             self.registers.write(reg, val)
 
     def preload_data_memory(self, values: dict):
+        """
+        Function: preload_data_memory
+        Precarga valores en la memoria de datos antes de la simulación.
+        Params:
+        - values: dict - diccionario {direccion: valor}.
+        Example:
+            cpu.preload_data_memory({0: 123, 4: 456})
+        """
         for addr, val in values.items():
             self.data_mem.store_word(addr, val)
 
     def run(self):
+        """
+        Function: run
+        Ejecuta el ciclo completo del pipeline hasta vaciarlo, mostrando el estado de cada etapa en cada ciclo.
+        Example:
+            cpu.run()
+        """
         print("Iniciando simulación del procesador (IF → ID → EX → MEM → WB)...\n")
         self.pipeline.init_pipeline()
 

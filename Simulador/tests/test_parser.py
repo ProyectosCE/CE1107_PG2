@@ -18,7 +18,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from IO.parser import Parser
+from io.parser import Parser
 
 def test_simple_program():
     """

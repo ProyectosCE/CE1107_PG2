@@ -1,3 +1,19 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Este módulo realiza pruebas unitarias para la etapa de decodificación de instrucciones (ID) del pipeline,
+validando la correcta lectura de operandos y extracción de campos de la instrucción.
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -8,6 +24,12 @@ from core.instruction import Instruction
 
 
 def test_instruction_decode():
+    """
+    Function: test_instruction_decode
+    Prueba la etapa de decodificación de instrucciones, verificando la lectura de operandos y campos.
+    Example:
+        test_instruction_decode()
+    """
     print(" Probando Instruction Decode (ID)...")
 
     # Crear banco de registros

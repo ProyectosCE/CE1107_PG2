@@ -1,18 +1,50 @@
+"""
+================================== LICENCIA ==============================
+MIT License
+Copyright (c) 2025 José Bernardo Barquero Bonilla,
+Jose Eduardo Campos Salazar,
+Jimmy Feng Feng,
+Alexander Montero Vargas
+Consulta el archivo LICENSE para más detalles.
+==========================================================================
+"""
+
+"""
+Class: ExecuteStage
+Clase que representa la etapa de ejecución (EX) del pipeline, encargada de realizar operaciones aritméticas, lógicas y de control de flujo.
+
+Attributes:
+(No tiene atributos propios, es una clase de utilidad por método.)
+
+Constructor:
+- __init__: Inicializa la instancia de la etapa de ejecución.
+
+Methods:
+- execute: Ejecuta la instrucción recibida desde la etapa ID, calculando resultados de la ALU y señales de control de salto.
+
+Example:
+    ex = ExecuteStage()
+    resultado = ex.execute(id_ex_dict)
+"""
+
 class ExecuteStage:
     def __init__(self):
+        """
+        Function: __init__
+        Inicializa la instancia de la etapa de ejecución.
+        """
         pass
 
     def execute(self, id_ex: dict) -> dict:
         """
-        Ejecuta la instrucción usando ALU y calcula resultados.
-
-        Entrada:
-        - id_ex: dict generado por la etapa ID
-
-        Salida:
-        - ex_mem: dict con:
-            - 'instr', 'alu_result', 'rs2_val'
-            - 'rd', 'pc', 'branch_taken', 'target_address'
+        Function: execute
+        Ejecuta la instrucción usando la ALU y calcula los resultados y señales de control.
+        Params:
+        - id_ex: dict - diccionario generado por la etapa ID, contiene la instrucción y operandos.
+        Returns:
+        - dict: diccionario con los resultados de la etapa EX (alu_result, branch_taken, etc).
+        Example:
+            ex_mem = ex.execute(id_ex)
         """
         instr = id_ex["instr"]
         opcode = instr.opcode
@@ -26,6 +58,7 @@ class ExecuteStage:
         imm = id_ex.get("imm", 0)
         pc = id_ex["pc"]
 
+        # Operaciones aritméticas y de control de flujo
         if opcode == "add":
             alu_result = rs1_val + rs2_val
         elif opcode == "sub":
