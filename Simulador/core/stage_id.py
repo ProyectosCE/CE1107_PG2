@@ -11,64 +11,32 @@ Consulta el archivo LICENSE para más detalles.
 
 from core.instruction import Instruction
 from components.register_file import RegisterFile
-
-
-"""
-Class: InstructionDecode
-Clase que representa la etapa de decodificación de instrucciones (ID) del pipeline, encargada de leer registros y extraer operandos.
-
-Attributes:
-- reg_file: RegisterFile - referencia al banco de registros para lectura de operandos.
-
-Constructor:
-- __init__: Recibe el banco de registros y lo almacena para uso en la decodificación.
-
-Methods:
-- decode: Decodifica la instrucción recibida desde IF/ID, lee los operandos y prepara los datos para la siguiente etapa.
-
-Example:
-    id_stage = InstructionDecode(reg_file)
-    id_ex = id_stage.decode(if_id_dict)
-"""
+from components.branch_predictor import BranchPredictor
 
 class InstructionDecode:
-    def __init__(self, register_file: RegisterFile):
+    def __init__(self, register_file: RegisterFile, branch_predictor: BranchPredictor):
         """
-        Function: __init__
-        Inicializa la etapa de decodificación con una referencia al banco de registros.
-        Params:
-        - register_file: RegisterFile - banco de registros para lectura de operandos.
-        Example:
-            id_stage = InstructionDecode(reg_file)
+        Inicializa la etapa de decodificación con referencias al banco de registros
+        y al predictor de saltos.
         """
         self.reg_file = register_file
+        self.branch_predictor = branch_predictor
 
     def decode(self, if_id: dict) -> dict:
         """
-        Function: decode
-        Realiza la decodificación de la instrucción en IF/ID, leyendo los operandos del banco de registros.
-        Params:
-        - if_id: dict - diccionario con claves 'instr' y 'pc'.
-        Returns:
-        - dict: diccionario con los datos necesarios para la etapa EX (id_ex).
-        Example:
-            id_ex = id_stage.decode(if_id)
+        Realiza la decodificación de la instrucción en IF/ID, leyendo los operandos
+        del banco de registros y consultando el predictor de saltos si aplica.
         """
         instr: Instruction = if_id["instr"]
         pc = if_id["pc"]
 
-        # Si es NOP, simplemente propagar
         if instr.opcode == "nop":
             return {"instr": instr, "pc": pc}
 
-        rs1_val = rs2_val = None
+        rs1_val = self.reg_file.read(instr.rs1) if instr.rs1 else None
+        rs2_val = self.reg_file.read(instr.rs2) if instr.rs2 else None
 
-        if instr.rs1:
-            rs1_val = self.reg_file.read(instr.rs1)
-        if instr.rs2:
-            rs2_val = self.reg_file.read(instr.rs2)
-
-        return {
+        id_ex = {
             "instr": instr,
             "pc": pc,
             "rs1_val": rs1_val,
@@ -78,3 +46,15 @@ class InstructionDecode:
             "rs1": instr.rs1,
             "rs2": instr.rs2
         }
+
+        # Predicción de saltos
+        if instr.opcode in {"beq", "bne", "jal"}:
+            prediction = self.branch_predictor.predict(pc)
+            id_ex["predicted_taken"] = prediction["taken"]
+
+            if prediction["taken"]:
+                id_ex["predicted_target"] = pc + instr.imm
+            else:
+                id_ex["predicted_target"] = pc + 4  # flujo secuencial
+
+        return id_ex

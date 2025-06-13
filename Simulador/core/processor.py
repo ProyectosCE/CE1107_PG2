@@ -29,13 +29,14 @@ class Processor:
 
         self.if_stage = InstructionFetch(self.instr_mem)
         self.registers = RegisterFile()
-        self.id_stage = InstructionDecode(self.registers)
-        self.ex_stage = ExecuteStage()
-        self.mem_stage = MemoryAccessStage(self.data_mem)
-        self.wb_stage = WriteBackStage(self.registers)
-
         self.hazard_unit = HazardUnit()
         self.branch_predictor = BranchPredictor()
+
+        # Pasar predictor a las etapas necesarias
+        self.id_stage = InstructionDecode(self.registers, self.branch_predictor)
+        self.ex_stage = ExecuteStage(self.branch_predictor)
+        self.mem_stage = MemoryAccessStage(self.data_mem)
+        self.wb_stage = WriteBackStage(self.registers)
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):
@@ -80,6 +81,10 @@ class Processor:
 
             # 3. Execute
             ex_mem = self.ex_stage.execute(id_ex)
+
+            # Verificar si se requiere flush por mala predicción
+            if ex_mem.get("flush_required", False):
+                self.pipeline.flush()
 
             # 4. Memory Access
             mem_wb = self.mem_stage.access(ex_mem)

@@ -1,33 +1,33 @@
 from core.processor import Processor
 
-print("\n SIMULACIÓN CON DETECCIÓN DE LOAD-USE HAZARD \n")
+print("\n SIMULACIÓN CON VARIOS SALTOS (beq) \n")
 
-# Programa de prueba con hazard
 program = [
-    "lw x1, 0(x2)",          # x1 ← mem[x2]
-    "add x3, x1, x4",        # usa x1 inmediatamente → provoca STALL
-    "add x5, x1, x6",        # debería avanzar normalmente (forwarding futuro)
-    "add x7, x3, x5"         # puede recibir ambos valores previamente procesados
+    "beq x1, x2, 8",     # PC=0 → no tomado (x1 ≠ x2) → puede provocar flush
+    "add x3, x0, x0",    # PC=4 → ejecuta después del flush
+    "beq x5, x5, 8",     # PC=8 → sí se toma (x5 == x5) → salta a PC=16
+    "add x6, x0, x0",    # PC=12 → se salta si el branch es tomado
+    "add x7, x0, x0"     # PC=16 → ejecuta después de salto tomado
 ]
 
-# Crear procesador
+# Inicializar procesador
 cpu = Processor()
 
-# Precargar valores en registros
+# Precargar registros
 cpu.preload_registers({
-    "x2": 4,     # dirección base
-    "x4": 10,
-    "x6": 20
+    "x1": 10,   # x1 ≠ x2 → no se toma
+    "x2": 20,
+    "x5": 42    # x5 == x5 → sí se toma
 })
 
-# Precargar memoria
-cpu.preload_data_memory({
-    4: 100  # mem[4] = 100 → será cargado en x1
-})
-
-# Cargar el programa y ejecutar
+# Cargar instrucciones
 cpu.load_program(program)
+
+# Ejecutar simulación
 cpu.run()
 
-# Resultado final esperado: x7 = x3 + x5 = (100 + 10) + (100 + 20) = 230
-print(f"\n Resultado final x7 = {cpu.registers.read('x7')}")
+# Mostrar resultados
+print("\n Resultado final:")
+print(f"x3 = {cpu.registers.read('x3')}")
+print(f"x6 = {cpu.registers.read('x6')}")
+print(f"x7 = {cpu.registers.read('x7')}")

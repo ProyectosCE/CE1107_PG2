@@ -33,6 +33,8 @@ Methods:
 - _create_nop_instruction: Crea una instrucción NOP interna.
 - is_done: Indica si el pipeline está vacío.
 - get_cycle: Devuelve el número de ciclos ejecutados.
+- insert_stall: Inserta una burbuja (NOP) en la etapa ID/EX para resolver hazards.
+- flush: Limpia las etapas IF/ID e ID/EX para anular instrucciones mal predichas.
 
 Example:
     pipe = Pipeline()
@@ -146,8 +148,11 @@ class Pipeline:
 
     def insert_stall(self):
         """
+        Function: insert_stall
         Inserta una burbuja (NOP) en la etapa ID/EX sin avanzar la instrucción en IF/ID.
         Usado típicamente para resolver un load-use hazard.
+        Example:
+            pipe.insert_stall()
         """
         nop = self._create_nop_instruction()
 
@@ -165,21 +170,25 @@ class Pipeline:
             "rs2_val": None,
             "imm": None
         }
-        # IF_ID no se modifica → mismo fetch, se repite la instrucción
-        def flush(self):
-            """
-            Limpia las etapas IF/ID e ID/EX para anular instrucciones mal predichas (por ejemplo, en saltos).
-            """
-            nop = self._create_nop_instruction()
+    # IF_ID no se modifica → mismo fetch, se repite la instrucción
 
-            self.IF_ID = {"instr": nop, "pc": 0}
-            self.ID_EX = {
-                "instr": nop,
-                "pc": 0,
-                "rd": None,
-                "rs1": None,
-                "rs2": None,
-                "rs1_val": None,
-                "rs2_val": None,
-                "imm": None
-            }
+    def flush(self):
+        """
+        Function: flush
+        Limpia las etapas IF/ID e ID/EX para anular instrucciones mal predichas (por ejemplo, en saltos).
+        Example:
+            pipe.flush()
+        """
+        nop = self._create_nop_instruction()
+
+        self.IF_ID = {"instr": nop, "pc": 0}
+        self.ID_EX = {
+            "instr": nop,
+            "pc": 0,
+            "rd": None,
+            "rs1": None,
+            "rs2": None,
+            "rs1_val": None,
+            "rs2_val": None,
+            "imm": None
+        }

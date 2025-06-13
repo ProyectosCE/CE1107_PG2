@@ -9,42 +9,18 @@ Consulta el archivo LICENSE para más detalles.
 ==========================================================================
 """
 
-"""
-Class: ExecuteStage
-Clase que representa la etapa de ejecución (EX) del pipeline, encargada de realizar operaciones aritméticas, lógicas y de control de flujo.
-
-Attributes:
-(No tiene atributos propios, es una clase de utilidad por método.)
-
-Constructor:
-- __init__: Inicializa la instancia de la etapa de ejecución.
-
-Methods:
-- execute: Ejecuta la instrucción recibida desde la etapa ID, calculando resultados de la ALU y señales de control de salto.
-
-Example:
-    ex = ExecuteStage()
-    resultado = ex.execute(id_ex_dict)
-"""
+from components.branch_predictor import BranchPredictor
 
 class ExecuteStage:
-    def __init__(self):
+    def __init__(self, branch_predictor: BranchPredictor):
         """
-        Function: __init__
-        Inicializa la instancia de la etapa de ejecución.
+        Inicializa la etapa EX con acceso al predictor de saltos.
         """
-        pass
+        self.branch_predictor = branch_predictor
 
     def execute(self, id_ex: dict) -> dict:
         """
-        Function: execute
-        Ejecuta la instrucción usando la ALU y calcula los resultados y señales de control.
-        Params:
-        - id_ex: dict - diccionario generado por la etapa ID, contiene la instrucción y operandos.
-        Returns:
-        - dict: diccionario con los resultados de la etapa EX (alu_result, branch_taken, etc).
-        Example:
-            ex_mem = ex.execute(id_ex)
+        Ejecuta la instrucción usando la ALU y controla lógica de saltos.
         """
         instr = id_ex["instr"]
         opcode = instr.opcode
@@ -58,7 +34,7 @@ class ExecuteStage:
         imm = id_ex.get("imm", 0)
         pc = id_ex["pc"]
 
-        # Operaciones aritméticas y de control de flujo
+        # ALU y lógica de saltos
         if opcode == "add":
             alu_result = rs1_val + rs2_val
         elif opcode == "sub":
@@ -72,7 +48,7 @@ class ExecuteStage:
         elif opcode == "addi":
             alu_result = rs1_val + imm
         elif opcode == "lw" or opcode == "sw":
-            alu_result = rs1_val + imm  # Dirección efectiva
+            alu_result = rs1_val + imm
         elif opcode == "beq":
             branch_taken = rs1_val == rs2_val
             target_address = pc + imm
@@ -80,13 +56,25 @@ class ExecuteStage:
             branch_taken = rs1_val != rs2_val
             target_address = pc + imm
         elif opcode == "jal":
-            alu_result = pc + 4  # return address
+            alu_result = pc + 4
             target_address = pc + imm
             branch_taken = True
         elif opcode == "nop":
-            pass  # No operación
+            pass
         else:
             raise ValueError(f"Operación no soportada: {opcode}")
+
+        # Validar predicción (solo si es instrucción de salto)
+        flush_required = False
+        if opcode in {"beq", "bne", "jal"}:
+            predicted = id_ex.get("predicted_taken", False)
+            actual = branch_taken
+
+            self.branch_predictor.update(pc, actual)
+
+            if self.branch_predictor.flush_required(predicted, actual):
+                flush_required = True
+                print(f" Predicción incorrecta @ PC={pc} → FLUSH requerido")
 
         return {
             "instr": instr,
@@ -95,5 +83,6 @@ class ExecuteStage:
             "rd": id_ex.get("rd"),
             "pc": pc,
             "branch_taken": branch_taken,
-            "target_address": target_address
+            "target_address": target_address,
+            "flush_required": flush_required
         }
