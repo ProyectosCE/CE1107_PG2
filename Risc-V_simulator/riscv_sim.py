@@ -13,20 +13,26 @@ class RiscVSimulatorApp(tk.Tk):
         self.title("Simulador RISC-V")
         self.minsize(width=1000, height=600)
 
-        # Selección activa por defecto (las dos primeras)
-        self.active_views = [True, True, False, False]   # 4 vistas
-        self._tabs = {}          # idx → frame dentro del Notebook
+        self.active_views = [True, True, False, False]
+        self._tabs = {}
 
-        # 1) Barra de menú
         self._create_menu_bar()
 
-        # 2) Grid principal
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=2)
-        self.grid_columnconfigure(2, weight=1)
+        # Aquí reemplazamos el grid principal por un PanedWindow horizontal
+        self.paned = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
+        self.paned.pack(fill='both', expand=True)
 
-        # 3) Secciones
+        # Creamos 3 frames para las columnas
+        self.code_frame = tk.Frame(self.paned)
+        self.sim_frame = tk.Frame(self.paned)
+        self.status_frame = tk.Frame(self.paned)
+
+        # Añadimos los frames al paned window
+        self.paned.add(self.code_frame, weight=1)
+        self.paned.add(self.sim_frame, weight=2)
+        self.paned.add(self.status_frame, weight=1)
+
+        # Ahora inicializamos cada sección dentro de su frame
         self._create_code_area()
         self._create_simulation_area()
         self._create_status_area()
@@ -110,37 +116,25 @@ class RiscVSimulatorApp(tk.Tk):
 
     # ───────────────────────── SECCIÓN CÓDIGO ───────────────────────────
     def _create_code_area(self):
-        code_frame = tk.Frame(self)
-        code_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        tk.Label(self.code_frame, text="Código RISC-V",
+                 font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
+        self.code_space = tk.Text(self.code_frame, width=30)
+        self.code_space.pack(expand=True, fill="both", padx=5, pady=5)
 
-        tk.Label(code_frame, text="Código RISC-V",
-                 font=("Arial", 12, "bold")).pack(anchor="w")
-
-        self.code_space = tk.Text(code_frame, width=30)
-        self.code_space.pack(expand=True, fill="both")
 
     # ──────────────────────── SECCIÓN SIMULACIÓN ────────────────────────
     def _create_simulation_area(self):
-        sim_frame = tk.Frame(self)
-        sim_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
-
-        tk.Label(sim_frame, text="Simulación",
+        tk.Label(self.sim_frame, text="Simulación",
                  font=("Arial", 14, "bold")).pack(anchor="center", pady=(5, 10))
-
-        # Notebook donde irán las vistas activas
-        self.notebook = ttk.Notebook(sim_frame)
-        self.notebook.pack(expand=True, fill="both")
-
-        self._refresh_sim_views()   # Carga las vistas iniciales
-
+        self.notebook = ttk.Notebook(self.sim_frame)
+        self.notebook.pack(expand=True, fill="both", padx=5, pady=5)
+        self._refresh_sim_views()
     def _refresh_sim_views(self):
-        """Añade o quita pestañas según self.active_views."""
         for idx, active in enumerate(self.active_views):
             if active and idx not in self._tabs:
                 frame = ALL_VIEWS[idx](self.notebook)
                 self.notebook.add(frame, text=f"Vista {idx+1}")
                 self._tabs[idx] = frame
-
             elif not active and idx in self._tabs:
                 frame = self._tabs.pop(idx)
                 self.notebook.forget(frame)
@@ -149,26 +143,18 @@ class RiscVSimulatorApp(tk.Tk):
 
     # ───────────────────────── SECCIÓN ESTADO ───────────────────────────
     def _create_status_area(self):
-        reg_frame = tk.Frame(self)
-        reg_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
-
-        tk.Label(reg_frame, text="Estado del Sistema",
-                 font=("Arial", 12, "bold")).pack(anchor="w")
-
-        self.ciclo_label = tk.Label(reg_frame, text="Ciclo: 0")
+        tk.Label(self.status_frame, text="Estado del Sistema",
+                 font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
+        self.ciclo_label = tk.Label(self.status_frame, text="Ciclo: 0")
         self.ciclo_label.pack(anchor="w", padx=5)
-
-        self.tiempo_label = tk.Label(reg_frame, text="Tiempo: 0.0 s")
+        self.tiempo_label = tk.Label(self.status_frame, text="Tiempo: 0.0 s")
         self.tiempo_label.pack(anchor="w", padx=5)
-
-        self.pc_label = tk.Label(reg_frame, text="PC: 0x00000000")
+        self.pc_label = tk.Label(self.status_frame, text="PC: 0x00000000")
         self.pc_label.pack(anchor="w", padx=5)
-
-        tk.Label(reg_frame, text="Registros",
-                 font=("Arial", 12, "bold")).pack(anchor="w", pady=(10, 0))
-
+        tk.Label(self.status_frame, text="Registros",
+                 font=("Arial", 12, "bold")).pack(anchor="w", pady=(10, 0), padx=5)
         self.reg_labels = []
         for i in range(8):
-            lbl = tk.Label(reg_frame, text=f"x{i:02d}: 0x00000000", anchor="w")
+            lbl = tk.Label(self.status_frame, text=f"x{i:02d}: 0x00000000", anchor="w")
             lbl.pack(fill="x", padx=5)
             self.reg_labels.append(lbl)
