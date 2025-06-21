@@ -8,7 +8,6 @@ from view_status import ViewStatus
 class RiscVSimulatorApp(tk.Tk):
     """Ventana principal del simulador RISC-V."""
 
-    # ────────────────────────────────────────────────────────────────────
     def __init__(self):
         super().__init__()
         self.title("Simulador RISC-V")
@@ -18,6 +17,7 @@ class RiscVSimulatorApp(tk.Tk):
         self._tabs = {}
 
         self._create_menu_bar()
+        self._create_toolbar()
 
         self.paned = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         self.paned.pack(fill='both', expand=True)
@@ -44,7 +44,13 @@ class RiscVSimulatorApp(tk.Tk):
 
         self._refresh_sim_views()
 
-    # ───────────────────────── MENÚ SUPERIOR ────────────────────────────
+    """
+    ======================================================================
+                             Menú de configuración
+    ======================================================================
+    """
+
+
     def _create_menu_bar(self):
         menu_bar = tk.Menu(self)
 
@@ -121,7 +127,52 @@ class RiscVSimulatorApp(tk.Tk):
         self._refresh_sim_views()
         window.destroy()
 
-    # ───────────────────────── SECCIÓN CÓDIGO ───────────────────────────
+    """
+    ======================================================================
+                     Toolbar de control de ejecucion
+    ======================================================================
+    """
+    def _create_toolbar(self):
+        bar = tk.Frame(self, bd=1, relief="raised", pady=2)
+        bar.pack(fill="x")
+
+        #  a) Paso a paso
+        tk.Button(bar, text="←", width=3, command=self._step_backward).pack(side="left", padx=2)
+        tk.Button(bar, text="→", width=3, command=self._step_forward).pack(side="left")
+        ttk.Separator(bar, orient="vertical").pack(side="left", fill="y", padx=4)
+
+        # b) Ejecución rítmica
+        tk.Label(bar, text="Intervalo (ms):").pack(side="left")
+        self.interval_spin = tk.Spinbox(
+            bar, from_=1, to=10000, width=5, validate="all",
+            validatecommand=(self.register(lambda v: v.isdigit() and int(v) >= 1), "%P")
+        )
+        self.interval_spin.pack(side="left", padx=2)
+        tk.Button(bar, text="Start", command=self._start_timed_exec).pack(side="left")
+        ttk.Separator(bar, orient="vertical").pack(side="left", fill="y", padx=4)
+
+        # c) Ejecución completa
+        tk.Button(bar, text="Run-All", command=self._run_full_exec).pack(side="left", padx=2)
+
+    # Callbacks
+    def _step_backward(self):
+        print("Step backward un ciclo")
+
+    def _step_forward(self):
+        print("Step forward un ciclo")
+
+    def _start_timed_exec(self):
+        ms = int(self.interval_spin.get())
+        print(f"Ejecución continua: un ciclo cada {ms} ms")
+
+    def _run_full_exec(self):
+        print("Ejecutar hasta el final")
+
+    """
+    ======================================================================
+                             Seccion de código
+    ======================================================================
+    """
     def _create_code_area(self):
         tk.Label(self.code_frame, text="Código RISC-V", font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
         self.code_space = tk.Text(self.code_frame, width=30)
@@ -129,7 +180,11 @@ class RiscVSimulatorApp(tk.Tk):
 
 
 
-    # ──────────────────────── SECCIÓN SIMULACIÓN ────────────────────────
+    """
+    ======================================================================
+                             Menú de simulacion
+    ======================================================================
+    """
     def _create_simulation_area(self):
         tk.Label(self.sim_frame, text="Simulación", font=("Arial", 14, "bold")).pack(anchor="center", pady=(5, 10))
         self.notebook = ttk.Notebook(self.sim_frame)
