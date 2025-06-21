@@ -1,25 +1,35 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+# Importación de vistas
+from sim_view.sim_view1 import SimView1
+from sim_view.sim_view2 import SimView2
+from sim_view.sim_view3 import SimView3
+from sim_view.sim_view4 import SimView4
 
 
 class RiscVSimulatorApp(tk.Tk):
-    # Ventana principal del simulador RISC-V.
+    """Ventana principal del simulador RISC-V."""
 
+    # ────────────────────────────────────────────────────────────────────
     def __init__(self):
         super().__init__()
         self.title("Simulador RISC-V")
         self.minsize(width=1000, height=600)
 
-        # Barra de menú
+        # Selección activa por defecto (las dos primeras)
+        self.active_views = [True, True, False, False]   # 4 vistas
+        self._tabs = {}          # idx → frame dentro del Notebook
+
+        # 1) Barra de menú
         self._create_menu_bar()
 
-        # Distribución del grid
+        # 2) Grid principal
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=2)
         self.grid_columnconfigure(2, weight=1)
 
-        # Secciones de la UI
+        # 3) Secciones
         self._create_code_area()
         self._create_simulation_area()
         self._create_status_area()
@@ -28,7 +38,6 @@ class RiscVSimulatorApp(tk.Tk):
     def _create_menu_bar(self):
         menu_bar = tk.Menu(self)
 
-        # Menú «Configuración»
         config_menu = tk.Menu(menu_bar, tearoff=0)
         config_menu.add_command(
             label="Opciones de configuración",
@@ -39,19 +48,68 @@ class RiscVSimulatorApp(tk.Tk):
         self.config(menu=menu_bar)
 
     def _open_config_window(self):
-        """Muestra una ventana emergente (modal) con opciones de configuración."""
+        # Ventana modal para escoger exactamente 2 vistas.
         cfg = tk.Toplevel(self)
         cfg.title("Opciones de configuración")
-        cfg.geometry("300x200")
-        cfg.grab_set()  # Ventana modal
+        cfg.geometry("320x260")
+        cfg.grab_set()
 
-        tk.Label(cfg, text="Configuraciones del simulador",
-                 font=("Arial", 12, "bold")).pack(pady=10)
+        tk.Label(cfg,
+                 text="Selecciona exactamente 2 vistas:",
+                 font=("Arial", 11, "bold")).pack(pady=(10, 5))
 
-        tk.Checkbutton(cfg, text="Habilitar modo detallado").pack(
-            anchor="w", padx=20, pady=5)
+        # Variables ligadas al estado actual
+        self._opt_vars = [tk.BooleanVar(value=v) for v in self.active_views]
 
-        tk.Button(cfg, text="Guardar", command=cfg.destroy).pack(pady=20)
+        # Orden histórico de selección (las que ya estaban activas primero)
+        self._selection_order = [i for i, v in enumerate(self.active_views) if v]
+
+        textos = ["Vista 1", "Vista 2", "Vista 3", "Vista 4"]
+        for idx, (txt, var) in enumerate(zip(textos, self._opt_vars)):
+            tk.Checkbutton(cfg,
+                           text=txt,
+                           variable=var,
+                           command=lambda i=idx: self._on_option_toggle(i)
+                           ).pack(anchor="w", padx=25, pady=2)
+
+        # Botones
+        btns = tk.Frame(cfg)
+        btns.pack(pady=15)
+
+        tk.Button(btns, text="Cancelar",
+                  width=10, command=cfg.destroy).pack(side="left", padx=5)
+
+        tk.Button(btns, text="Guardar",
+                  width=10, command=lambda: self._save_config(cfg)).pack(
+            side="right", padx=5)
+
+    def _on_option_toggle(self, idx):
+        # Mantiene siempre ≤2 opciones activas.
+
+        var = self._opt_vars[idx]
+
+        if var.get():  # Se acaba de activar
+            self._selection_order.append(idx)
+            if len(self._selection_order) > 2:
+                old_idx = self._selection_order.pop(0)  # la más antigua
+                self._opt_vars[old_idx].set(False)
+        else:  # Se acaba de desactivar
+            if idx in self._selection_order:
+                self._selection_order.remove(idx)
+
+    def _save_config(self, window):
+        # Guarda selección solo si hay exactamente 2 vistas activas.
+        new_selection = [var.get() for var in self._opt_vars]
+
+        if sum(new_selection) != 2:
+            messagebox.showerror(
+                "Número incorrecto de vistas",
+                "Debes tener exactamente 2 vistas activas.")
+            return
+
+        self.active_views = new_selection
+        self._refresh_sim_views()
+        window.destroy()
 
     # ───────────────────────── SECCIÓN CÓDIGO ───────────────────────────
     def _create_code_area(self):
@@ -72,20 +130,26 @@ class RiscVSimulatorApp(tk.Tk):
         tk.Label(sim_frame, text="Simulación",
                  font=("Arial", 14, "bold")).pack(anchor="center", pady=(5, 10))
 
-        notebook = ttk.Notebook(sim_frame)
-        notebook.pack(expand=True, fill="both")
+        # Notebook donde irán las vistas activas
+        self.notebook = ttk.Notebook(sim_frame)
+        self.notebook.pack(expand=True, fill="both")
 
-        # Pestaña 1
-        ciclo_frame = tk.Frame(notebook)
-        notebook.add(ciclo_frame, text="Procesador 1")
-        tk.Label(ciclo_frame, text="Procesador 1",
-                 font=("Arial", 11)).pack(padx=10, pady=10)
+        self._refresh_sim_views()   # Carga las vistas iniciales
 
-        # Pestaña 2
-        pipeline_frame = tk.Frame(notebook)
-        notebook.add(pipeline_frame, text="Procesador 2")
-        tk.Label(pipeline_frame, text="Procesador 2",
-                 font=("Arial", 11)).pack(padx=10, pady=10)
+    def _refresh_sim_views(self):
+        """Añade o quita pestañas según self.active_views."""
+        view_classes = [SimView1, SimView2, SimView3, SimView4]
+
+        for idx, active in enumerate(self.active_views):
+            if active and idx not in self._tabs:
+                frame = view_classes[idx](self.notebook)
+                self.notebook.add(frame, text=f"Vista {idx+1}")
+                self._tabs[idx] = frame
+
+            elif not active and idx in self._tabs:
+                frame = self._tabs.pop(idx)
+                self.notebook.forget(frame)
+                frame.destroy()
 
     # ───────────────────────── SECCIÓN ESTADO ───────────────────────────
     def _create_status_area(self):
@@ -104,8 +168,8 @@ class RiscVSimulatorApp(tk.Tk):
         self.pc_label = tk.Label(reg_frame, text="PC: 0x00000000")
         self.pc_label.pack(anchor="w", padx=5)
 
-        tk.Label(reg_frame, text="Registros", font=("Arial", 12, "bold")).pack(
-            anchor="w", pady=(10, 0))
+        tk.Label(reg_frame, text="Registros",
+                 font=("Arial", 12, "bold")).pack(anchor="w", pady=(10, 0))
 
         self.reg_labels = []
         for i in range(8):
