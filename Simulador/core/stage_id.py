@@ -1,41 +1,33 @@
 from core.instruction import Instruction
 from components.register_file import RegisterFile
-
+from components.branch_predictor import BranchPredictor
+from components.control_unit import ControlUnit  
 
 class InstructionDecode:
-    def __init__(self, register_file: RegisterFile):
+    def __init__(self, register_file: RegisterFile, branch_predictor: BranchPredictor, control_unit: ControlUnit):
+        """
+        Inicializa la etapa ID con acceso al banco de registros, predictor de saltos y unidad de control.
+        """
         self.reg_file = register_file
+        self.branch_predictor = branch_predictor
+        self.control_unit = control_unit 
 
     def decode(self, if_id: dict) -> dict:
-        """
-        Realiza la decodificación de la instrucción en IF/ID.
-
-        Entrada:
-        - if_id: dict con claves 'instr' y 'pc'
-
-        Salida:
-        - id_ex: dict con:
-            - 'instr'
-            - 'pc'
-            - 'rs1_val', 'rs2_val'
-            - 'imm'
-            - 'rd', 'rs1', 'rs2'
-        """
         instr: Instruction = if_id["instr"]
         pc = if_id["pc"]
 
-        # Si es NOP, simplemente propagar
         if instr.opcode == "nop":
             return {"instr": instr, "pc": pc}
 
-        rs1_val = rs2_val = None
+        # Leer operandos del banco de registros
+        rs1_val = self.reg_file.read(instr.rs1) if instr.rs1 else 0
+        rs2_val = self.reg_file.read(instr.rs2) if instr.rs2 else 0
 
-        if instr.rs1:
-            rs1_val = self.reg_file.read(instr.rs1)
-        if instr.rs2:
-            rs2_val = self.reg_file.read(instr.rs2)
+        # Generar señales de control según el tipo de instrucción
+        control_signals = self.control_unit.generate_signals(instr.opcode)
 
-        return {
+        # Armar paquete para la etapa EX
+        id_ex = {
             "instr": instr,
             "pc": pc,
             "rs1_val": rs1_val,
@@ -43,5 +35,18 @@ class InstructionDecode:
             "imm": instr.imm,
             "rd": instr.rd,
             "rs1": instr.rs1,
-            "rs2": instr.rs2
+            "rs2": instr.rs2,
+            "control_signals": control_signals 
         }
+
+        # Predicción de saltos si aplica
+        if instr.opcode in {"beq", "bne", "jal"}:
+            prediction = self.branch_predictor.predict(pc)
+            id_ex["predicted_taken"] = prediction["taken"]
+
+            if prediction["taken"]:
+                id_ex["predicted_target"] = pc + instr.imm
+            else:
+                id_ex["predicted_target"] = pc + 4
+
+        return id_ex

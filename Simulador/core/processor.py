@@ -6,8 +6,10 @@ from core.stage_mem import MemoryAccessStage
 from core.stage_wb import WriteBackStage
 from components.register_file import RegisterFile
 from components.memory import Memory
+from components.hazard_unit import HazardUnit
+from components.branch_predictor import BranchPredictor
+from components.control_unit import ControlUnit  
 from core.instruction import Instruction
-
 
 class Processor:
     def __init__(self):
@@ -17,8 +19,13 @@ class Processor:
 
         self.if_stage = InstructionFetch(self.instr_mem)
         self.registers = RegisterFile()
-        self.id_stage = InstructionDecode(self.registers)
-        self.ex_stage = ExecuteStage()
+        self.hazard_unit = HazardUnit()
+        self.branch_predictor = BranchPredictor()
+        self.control_unit = ControlUnit()  # Instanciar unidad de control
+
+        # Pasar unidad de control y predictor a InstructionDecode
+        self.id_stage = InstructionDecode(self.registers, self.branch_predictor, self.control_unit)
+        self.ex_stage = ExecuteStage(self.branch_predictor)
         self.mem_stage = MemoryAccessStage(self.data_mem)
         self.wb_stage = WriteBackStage(self.registers)
 
@@ -41,26 +48,42 @@ class Processor:
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
-            # 1. IF
-            fetched = self.if_stage.fetch()
-            instr = fetched["instr"]
-            pc = fetched["pc"]
-            self.pipeline.step(instr, pc)
+            # 0. Detectar hazards
+            hazard_info = self.hazard_unit.detect_hazard(
+                self.pipeline.IF_ID,
+                self.pipeline.ID_EX,
+                self.pipeline.EX_MEM,
+                self.pipeline.MEM_WB
+            )
 
-            # 2. ID
+            if hazard_info["stall"]:
+                print("Hazard detectado → STALL aplicado (load-use)")
+                self.pipeline.insert_stall()
+            else:
+                # 1. Instruction Fetch
+                fetched = self.if_stage.fetch()
+                instr = fetched["instr"]
+                pc = fetched["pc"]
+                self.pipeline.step(instr, pc)
+
+            # 2. Instruction Decode
             if_id = self.pipeline.IF_ID
             id_ex = self.id_stage.decode(if_id)
 
-            # 3. EX
+            # 3. Execute
             ex_mem = self.ex_stage.execute(id_ex)
 
-            # 4. MEM
+            # Verificar si se requiere flush por mala predicción
+            if ex_mem.get("flush_required", False):
+                self.pipeline.flush()
+
+            # 4. Memory Access
             mem_wb = self.mem_stage.access(ex_mem)
 
-            # 5. WB
+            # 5. Write Back
             self.wb_stage.write_back(mem_wb)
 
-            # 6. Imprimir ciclo
+            # 6. Imprimir estado del ciclo
             print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
             print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
 

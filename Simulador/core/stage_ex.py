@@ -1,59 +1,67 @@
+from components.branch_predictor import BranchPredictor
+
 class ExecuteStage:
-    def __init__(self):
-        pass
+    def __init__(self, branch_predictor: BranchPredictor):
+        self.branch_predictor = branch_predictor
 
     def execute(self, id_ex: dict) -> dict:
-        """
-        Ejecuta la instrucción usando ALU y calcula resultados.
-
-        Entrada:
-        - id_ex: dict generado por la etapa ID
-
-        Salida:
-        - ex_mem: dict con:
-            - 'instr', 'alu_result', 'rs2_val'
-            - 'rd', 'pc', 'branch_taken', 'target_address'
-        """
         instr = id_ex["instr"]
         opcode = instr.opcode
+
+        control = id_ex.get("control_signals", {})
 
         alu_result = 0
         branch_taken = False
         target_address = None
+        flush_required = False
 
         rs1_val = id_ex.get("rs1_val", 0)
         rs2_val = id_ex.get("rs2_val", 0)
         imm = id_ex.get("imm", 0)
         pc = id_ex["pc"]
 
-        if opcode == "add":
-            alu_result = rs1_val + rs2_val
-        elif opcode == "sub":
-            alu_result = rs1_val - rs2_val
-        elif opcode == "and":
-            alu_result = rs1_val & rs2_val
-        elif opcode == "or":
-            alu_result = rs1_val | rs2_val
-        elif opcode == "slt":
-            alu_result = int(rs1_val < rs2_val)
-        elif opcode == "addi":
-            alu_result = rs1_val + imm
-        elif opcode == "lw" or opcode == "sw":
-            alu_result = rs1_val + imm  # Dirección efectiva
-        elif opcode == "beq":
+        # Decidir segundo operando ALU (inmediato o registro)
+        operand2 = imm if control.get("ALUSrc", False) else rs2_val
+
+        # Ejecutar operación según ALUOp
+        alu_op = control.get("ALUOp", "ADD")
+
+        if alu_op == "ADD":
+            alu_result = rs1_val + operand2
+        elif alu_op == "SUB":
+            alu_result = rs1_val - operand2
+        elif alu_op == "AND":
+            alu_result = rs1_val & operand2
+        elif alu_op == "OR":
+            alu_result = rs1_val | operand2
+        elif alu_op == "SLT":
+            alu_result = int(rs1_val < operand2)
+        elif alu_op == "NOP":
+            pass
+        else:
+            raise ValueError(f"ALUOp no soportado: {alu_op}")
+
+        # Lógica de branch
+        if opcode == "beq":
             branch_taken = rs1_val == rs2_val
             target_address = pc + imm
         elif opcode == "bne":
             branch_taken = rs1_val != rs2_val
             target_address = pc + imm
         elif opcode == "jal":
-            alu_result = pc + 4  # return address
+            alu_result = pc + 4
             target_address = pc + imm
             branch_taken = True
-        elif opcode == "nop":
-            pass  # No operación
-        else:
-            raise ValueError(f"Operación no soportada: {opcode}")
+
+        # Verificación de predicción de salto
+        if opcode in {"beq", "bne", "jal"}:
+            predicted = id_ex.get("predicted_taken", False)
+            actual = branch_taken
+            self.branch_predictor.update(pc, actual)
+
+            if self.branch_predictor.flush_required(predicted, actual):
+                flush_required = True
+                print(f"Predicción incorrecta @ PC={pc} → FLUSH requerido")
 
         return {
             "instr": instr,
@@ -62,5 +70,7 @@ class ExecuteStage:
             "rd": id_ex.get("rd"),
             "pc": pc,
             "branch_taken": branch_taken,
-            "target_address": target_address
+            "target_address": target_address,
+            "flush_required": flush_required,
+            "control_signals": control  # Propagar señales a MEM
         }

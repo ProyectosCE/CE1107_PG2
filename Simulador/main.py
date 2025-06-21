@@ -1,18 +1,35 @@
+# main.py
+
 from core.processor import Processor
 
-print("\n==== SIMULACIÓN COMPLETA: RISC-V 5 ETAPAS ====\n")
+print("\n==== SIMULACIÓN DE CONTROL UNIT COMPLETO ====\n")
 
 program = [
-    "addi x2, x0, 4",        # x2 = 4
-    "addi x3, x0, 1234",     # x3 = 1234
-    "sw x3, 0(x2)",          # mem[4] = 1234
-    "lw x1, 0(x2)",          # x1 = mem[4]
-    "add x5, x1, x3"         # x5 = x1 + x3 = 1234 + 1234 = 2468
+    "addi x1, x0, 10",   
+    "addi x2, x0, 20",    
+    "add x3, x1, x2",     
+    "sw x3, 0(x0)",       
+    "lw x4, 0(x0)",       
+    "beq x1, x2, 8",      
+    "add x5, x0, x0",     
+    "jal x6, 4",          
+    "add x7, x0, x0"      
 ]
 
 cpu = Processor()
+
+# No es necesario precargar registros
+
 cpu.load_program(program)
 cpu.run()
 
-# Imprimir resultado final de x5
-print(f"\n x5 final = {cpu.registers.read('x5')}")
+# Mostrar resultados
+print("\n Resultado final:")
+print(f"x1 = {cpu.registers.read('x1')}")  # Esperado: 10
+print(f"x2 = {cpu.registers.read('x2')}")  # Esperado: 20
+print(f"x3 = {cpu.registers.read('x3')}")  # Esperado: 30
+print(f"x4 = {cpu.registers.read('x4')}")  # Esperado: 30 (cargado de memoria)
+print(f"x5 = {cpu.registers.read('x5')}")  # Esperado: 0
+print(f"x6 = {cpu.registers.read('x6')}")  # Esperado: dirección de retorno (PC + 4)
+print(f"x7 = {cpu.registers.read('x7')}")  # Esperado: 0 (instrucción fue saltada)
+print(f"Mem[0] = {cpu.data_mem.load_word(0)}")  # Esperado: 30

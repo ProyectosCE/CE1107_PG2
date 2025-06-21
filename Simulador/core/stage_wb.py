@@ -1,32 +1,24 @@
 from components.register_file import RegisterFile
 
-
 class WriteBackStage:
     def __init__(self, register_file: RegisterFile):
         self.reg_file = register_file
 
     def write_back(self, mem_wb: dict):
-        """
-        Realiza la escritura en el banco de registros si aplica.
-
-        Entrada:
-        - mem_wb: dict con resultados de MEM
-
-        Efecto:
-        - Escribe en el registro rd si corresponde.
-        """
         instr = mem_wb["instr"]
-        opcode = instr.opcode
         rd = mem_wb.get("rd")
+        control = mem_wb.get("control_signals", {})
+
+        if not control.get("RegWrite", False):
+            return  # No se debe escribir en registros
 
         if rd is None or rd == "x0":
-            return  # No escribir en x0 
+            return  # Nunca escribir en x0
 
-        if opcode == "lw":
+        # Selección de fuente según MemToReg
+        if control.get("MemToReg", False):
             value = mem_wb.get("mem_data")
-        elif opcode in {"add", "sub", "and", "or", "slt", "addi", "jal"}:
-            value = mem_wb.get("alu_result")
         else:
-            return  # No escritura (sw, beq, bne, nop)
+            value = mem_wb.get("alu_result")
 
         self.reg_file.write(rd, value)
