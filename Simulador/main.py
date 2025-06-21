@@ -9,11 +9,7 @@ program = [
     "addi x2, x0, 20",    
     "add x3, x1, x2",     
     "sw x3, 0(x0)",       
-    "lw x4, 0(x0)",       
-    "beq x1, x2, 8",      
-    "add x5, x0, x0",     
-    "jal x6, 4",          
-    "add x7, x0, x0"      
+    "lw x4, 0(x0)"      
 ]
 
 cpu = Processor()

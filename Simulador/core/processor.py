@@ -10,6 +10,7 @@ from components.hazard_unit import HazardUnit
 from components.branch_predictor import BranchPredictor
 from components.control_unit import ControlUnit  
 from core.instruction import Instruction
+from InOut.metrics import Metrics  
 
 class Processor:
     def __init__(self):
@@ -21,13 +22,14 @@ class Processor:
         self.registers = RegisterFile()
         self.hazard_unit = HazardUnit()
         self.branch_predictor = BranchPredictor()
-        self.control_unit = ControlUnit()  # Instanciar unidad de control
+        self.control_unit = ControlUnit()
 
-        # Pasar unidad de control y predictor a InstructionDecode
         self.id_stage = InstructionDecode(self.registers, self.branch_predictor, self.control_unit)
         self.ex_stage = ExecuteStage(self.branch_predictor)
         self.mem_stage = MemoryAccessStage(self.data_mem)
         self.wb_stage = WriteBackStage(self.registers)
+
+        self.metrics = Metrics()  
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):
@@ -48,7 +50,8 @@ class Processor:
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
-            # 0. Detectar hazards
+            self.metrics.tick()  
+
             hazard_info = self.hazard_unit.detect_hazard(
                 self.pipeline.IF_ID,
                 self.pipeline.ID_EX,
@@ -60,30 +63,29 @@ class Processor:
                 print("Hazard detectado → STALL aplicado (load-use)")
                 self.pipeline.insert_stall()
             else:
-                # 1. Instruction Fetch
                 fetched = self.if_stage.fetch()
                 instr = fetched["instr"]
                 pc = fetched["pc"]
                 self.pipeline.step(instr, pc)
 
-            # 2. Instruction Decode
             if_id = self.pipeline.IF_ID
             id_ex = self.id_stage.decode(if_id)
-
-            # 3. Execute
             ex_mem = self.ex_stage.execute(id_ex)
 
-            # Verificar si se requiere flush por mala predicción
+            if ex_mem["instr"].opcode in {"beq", "bne", "jal"}:
+                predicted = id_ex.get("predicted_taken", False)
+                actual = ex_mem.get("branch_taken", False)
+                self.metrics.track_branch(predicted, actual)
+
             if ex_mem.get("flush_required", False):
                 self.pipeline.flush()
 
-            # 4. Memory Access
             mem_wb = self.mem_stage.access(ex_mem)
-
-            # 5. Write Back
             self.wb_stage.write_back(mem_wb)
 
-            # 6. Imprimir estado del ciclo
+            self.metrics.track_writeback(mem_wb["instr"])
+
+            # Prints por etapa
             print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
             print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
 
@@ -108,4 +110,6 @@ class Processor:
             else:
                 print("MEM_WB: nop")
 
-        print("\n Programa finalizado. Pipeline vacío.")
+        print("\nPrograma finalizado. Pipeline vacío.")
+
+        self.metrics.report()
