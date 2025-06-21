@@ -1,10 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 # Importación de vistas
-from sim_view.sim_view1 import SimView1
-from sim_view.sim_view2 import SimView2
-from sim_view.sim_view3 import SimView3
-from sim_view.sim_view4 import SimView4
+from sim_view import ALL_VIEWS
 
 
 class RiscVSimulatorApp(tk.Tk):
@@ -138,11 +135,9 @@ class RiscVSimulatorApp(tk.Tk):
 
     def _refresh_sim_views(self):
         """Añade o quita pestañas según self.active_views."""
-        view_classes = [SimView1, SimView2, SimView3, SimView4]
-
         for idx, active in enumerate(self.active_views):
             if active and idx not in self._tabs:
-                frame = view_classes[idx](self.notebook)
+                frame = ALL_VIEWS[idx](self.notebook)
                 self.notebook.add(frame, text=f"Vista {idx+1}")
                 self._tabs[idx] = frame
 
@@ -150,6 +145,7 @@ class RiscVSimulatorApp(tk.Tk):
                 frame = self._tabs.pop(idx)
                 self.notebook.forget(frame)
                 frame.destroy()
+       #self._tabs[0].highlight("alu") # Ejemplo prueba de resaltado
 
     # ───────────────────────── SECCIÓN ESTADO ───────────────────────────
     def _create_status_area(self):
