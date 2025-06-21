@@ -1,14 +1,3 @@
-"""
-================================== LICENCIA ==============================
-MIT License
-Copyright (c) 2025 José Bernardo Barquero Bonilla,
-Jose Eduardo Campos Salazar,
-Jimmy Feng Feng,
-Alexander Montero Vargas
-Consulta el archivo LICENSE para más detalles.
-==========================================================================
-"""
-
 from core.pipeline import Pipeline
 from core.stage_if import InstructionFetch
 from core.stage_id import InstructionDecode
@@ -19,6 +8,7 @@ from components.register_file import RegisterFile
 from components.memory import Memory
 from components.hazard_unit import HazardUnit
 from components.branch_predictor import BranchPredictor
+from components.control_unit import ControlUnit  
 from core.instruction import Instruction
 
 class Processor:
@@ -31,9 +21,10 @@ class Processor:
         self.registers = RegisterFile()
         self.hazard_unit = HazardUnit()
         self.branch_predictor = BranchPredictor()
+        self.control_unit = ControlUnit()  # Instanciar unidad de control
 
-        # Pasar predictor a las etapas necesarias
-        self.id_stage = InstructionDecode(self.registers, self.branch_predictor)
+        # Pasar unidad de control y predictor a InstructionDecode
+        self.id_stage = InstructionDecode(self.registers, self.branch_predictor, self.control_unit)
         self.ex_stage = ExecuteStage(self.branch_predictor)
         self.mem_stage = MemoryAccessStage(self.data_mem)
         self.wb_stage = WriteBackStage(self.registers)

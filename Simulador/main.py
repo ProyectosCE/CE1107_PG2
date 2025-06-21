@@ -1,33 +1,35 @@
+# main.py
+
 from core.processor import Processor
 
-print("\n SIMULACIÓN CON VARIOS SALTOS (beq) \n")
+print("\n==== SIMULACIÓN DE CONTROL UNIT COMPLETO ====\n")
 
 program = [
-    "beq x1, x2, 8",     # PC=0 → no tomado (x1 ≠ x2) → puede provocar flush
-    "add x3, x0, x0",    # PC=4 → ejecuta después del flush
-    "beq x5, x5, 8",     # PC=8 → sí se toma (x5 == x5) → salta a PC=16
-    "add x6, x0, x0",    # PC=12 → se salta si el branch es tomado
-    "add x7, x0, x0"     # PC=16 → ejecuta después de salto tomado
+    "addi x1, x0, 10",   
+    "addi x2, x0, 20",    
+    "add x3, x1, x2",     
+    "sw x3, 0(x0)",       
+    "lw x4, 0(x0)",       
+    "beq x1, x2, 8",      
+    "add x5, x0, x0",     
+    "jal x6, 4",          
+    "add x7, x0, x0"      
 ]
 
-# Inicializar procesador
 cpu = Processor()
 
-# Precargar registros
-cpu.preload_registers({
-    "x1": 10,   # x1 ≠ x2 → no se toma
-    "x2": 20,
-    "x5": 42    # x5 == x5 → sí se toma
-})
+# No es necesario precargar registros
 
-# Cargar instrucciones
 cpu.load_program(program)
-
-# Ejecutar simulación
 cpu.run()
 
 # Mostrar resultados
 print("\n Resultado final:")
-print(f"x3 = {cpu.registers.read('x3')}")
-print(f"x6 = {cpu.registers.read('x6')}")
-print(f"x7 = {cpu.registers.read('x7')}")
+print(f"x1 = {cpu.registers.read('x1')}")  # Esperado: 10
+print(f"x2 = {cpu.registers.read('x2')}")  # Esperado: 20
+print(f"x3 = {cpu.registers.read('x3')}")  # Esperado: 30
+print(f"x4 = {cpu.registers.read('x4')}")  # Esperado: 30 (cargado de memoria)
+print(f"x5 = {cpu.registers.read('x5')}")  # Esperado: 0
+print(f"x6 = {cpu.registers.read('x6')}")  # Esperado: dirección de retorno (PC + 4)
+print(f"x7 = {cpu.registers.read('x7')}")  # Esperado: 0 (instrucción fue saltada)
+print(f"Mem[0] = {cpu.data_mem.load_word(0)}")  # Esperado: 30
