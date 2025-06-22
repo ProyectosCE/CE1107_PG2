@@ -1,19 +1,20 @@
 from core.pipeline import Pipeline
 from core.stage_if import InstructionFetch
-from core.stage_id import InstructionDecode
-from core.stage_ex import ExecuteStage
+from core.stage_id_basic import InstructionDecodeBasic
+from core.stage_ex_basic import ExecuteStageBasic
 from core.stage_mem import MemoryAccessStage
 from core.stage_wb import WriteBackStage
 from components.register_file import RegisterFile
 from components.memory import Memory
-from components.hazard_unit import HazardUnit
-from components.branch_predictor import BranchPredictor
-from components.control_unit import ControlUnit  
 from core.instruction import Instruction
-from InOut.metrics import Metrics  
+from InOut.metrics import Metrics
 import time
 
-class Processor:
+class ProcessorNoHazards:
+    """
+    Simula un procesador con forwarding habilitado (sin unidad de riesgos explícita),
+    lo que permite evitar stalls en muchos casos comunes.
+    """
     def __init__(self):
         self.instr_mem = Memory(size_in_words=64)
         self.data_mem = Memory(size_in_words=64)
@@ -21,16 +22,12 @@ class Processor:
 
         self.if_stage = InstructionFetch(self.instr_mem, latency=None)
         self.registers = RegisterFile()
-        self.hazard_unit = HazardUnit()
-        self.branch_predictor = BranchPredictor()
-        self.control_unit = ControlUnit()
-
-        self.id_stage = InstructionDecode(self.registers, self.branch_predictor, self.control_unit, latency=None)
-        self.ex_stage = ExecuteStage(self.branch_predictor, latency=None)
+        self.id_stage = InstructionDecodeBasic(self.registers, latency=None)  # Sin unidad de control/predictor
+        self.ex_stage = ExecuteStageBasic(latency=None)                     # Sin predicción
         self.mem_stage = MemoryAccessStage(self.data_mem, latency=None)
         self.wb_stage = WriteBackStage(self.registers, latency=None)
 
-        self.metrics = Metrics(name="Procesador Completo")  
+        self.metrics = Metrics(name="Processor Sin Unidad de Riesgos")
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):
@@ -56,42 +53,29 @@ class Processor:
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
-            self.metrics.tick()  
+            self.metrics.tick()
 
-            hazard_info = self.hazard_unit.detect_hazard(
-                self.pipeline.IF_ID,
-                self.pipeline.ID_EX,
-                self.pipeline.EX_MEM,
-                self.pipeline.MEM_WB
-            )
+            # 1. IF
+            fetched = self.if_stage.fetch()
+            instr = fetched["instr"]
+            pc = fetched["pc"]
+            self.pipeline.step(instr, pc)
 
-            if hazard_info["stall"]:
-                print("Hazard detectado → STALL aplicado (load-use)")
-                self.pipeline.insert_stall()
-            else:
-                fetched = self.if_stage.fetch()
-                instr = fetched["instr"]
-                pc = fetched["pc"]
-                self.pipeline.step(instr, pc)
-
+            # 2. ID
             if_id = self.pipeline.IF_ID
             id_ex = self.id_stage.decode(if_id)
+
+            # 3. EX
             ex_mem = self.ex_stage.execute(id_ex)
 
-            if ex_mem["instr"].opcode in {"beq", "bne", "jal"}:
-                predicted = id_ex.get("predicted_taken", False)
-                actual = ex_mem.get("branch_taken", False)
-                self.metrics.track_branch(predicted, actual)
-
-            if ex_mem.get("flush_required", False):
-                self.pipeline.flush()
-
+            # 4. MEM
             mem_wb = self.mem_stage.access(ex_mem)
-            self.wb_stage.write_back(mem_wb)
 
+            # 5. WB
+            self.wb_stage.write_back(mem_wb)
             self.metrics.track_writeback(mem_wb["instr"])
 
-            # Prints por etapa
+            # Imprimir estado por etapa
             print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
             print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
 
@@ -123,9 +107,5 @@ class Processor:
                 time.sleep(delay_seg)
             # modo "full" no hace nada extra
 
-        print("\nPrograma finalizado (Procesador Completo). Pipeline vacío.")
-
+        print("\n Programa finalizado (ProcessorNoHazards). Pipeline vacío.")
         self.metrics.display()
-
-    def get_metrics(self):
-        return self.metrics
