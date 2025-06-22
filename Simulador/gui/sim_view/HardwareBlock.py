@@ -1,33 +1,38 @@
 class HardwareBlock:
-    def __init__(self, canvas, x, y, width, height, label, fill="lightgray", tags=None):
+    def __init__(self, canvas, x, y, width, height, label,
+                 fill="#DCE4EF", border_color="#4A6FA5", text_color="#1A1A1A",
+                 shape_type="rect", tags=None):
         self.canvas = canvas
         self.x, self.y = x, y
         self.width, self.height = width, height
         self.label = label
         self.fill = fill
+        self.border_color = border_color
+        self.text_color = text_color
+        self.shape_type = shape_type  # "rect" o "trapezoid"
         self.rect_id = None
         self.text_id = None
-        if tags is None:
-            self.tag = None
-        elif isinstance(tags, (list, tuple)):
-            self.tag = tags[0]  # primer tag de la lista/tupla
-        else:
-            self.tag = tags  # era un string
+        self.tag = tags[0] if isinstance(tags, (list, tuple)) else tags
+        self.ports = {}  # Diccionario de puertos: nombre → (x, y)
+        self.port_radius = 3  # Visual opcional
 
-    def draw(self):
-        self.rect_id = self.canvas.create_rectangle(
-            self.x, self.y,
-            self.x + self.width, self.y + self.height,
-            fill=self.fill, outline="black", width=2, tags=self.tag
-        )
+    def add_port(self, name, x_offset, y_offset, show=True):
+        """Agrega un puerto nombrado con posición relativa al bloque."""
+        abs_x = self.x + x_offset
+        abs_y = self.y + y_offset
+        self.ports[name] = (abs_x, abs_y)
 
-        self.text_id = self.canvas.create_text(
-            self.x + self.width / 2,
-            self.y + self.height / 2,
-            text=self.label,
-            font=("Arial", 8, "bold"),
-            justify="center"
-        )
+        if show:
+            # Dibujar un pequeño círculo para visualizar el puerto
+            r = self.port_radius
+            self.canvas.create_oval(abs_x - r, abs_y - r, abs_x + r, abs_y + r,
+                                    fill="#000", outline="", tags=self.tag)
+
+    def get_port(self, name):
+        """Devuelve la posición absoluta (x, y) de un puerto nombrado."""
+        if name not in self.ports:
+            raise ValueError(f"Puerto '{name}' no definido en '{self.label}'")
+        return self.ports[name]
 
     def center_right(self):
         return (self.x + self.width, self.y + self.height / 2)
@@ -35,64 +40,41 @@ class HardwareBlock:
     def center_left(self):
         return (self.x, self.y + self.height / 2)
 
-class ConnectionLine:
-    def __init__(self, canvas, start_block: HardwareBlock, end_block: HardwareBlock):
-        self.canvas = canvas
-        self.start_block = start_block
-        self.end_block = end_block
-        self.line_id = None
-
     def draw(self):
-        start_x, start_y = self.start_block.center_right()
-        end_x, end_y = self.end_block.center_left()
-        self.line_id = self.canvas.create_line(
-            start_x, start_y, end_x, end_y,
-            fill="black", width=2, arrow="last"
+        shadow_offset = 3
+
+        if self.shape_type == "rect":
+            self.canvas.create_rectangle(
+                self.x + shadow_offset, self.y + shadow_offset,
+                self.x + self.width + shadow_offset, self.y + self.height + shadow_offset,
+                fill="#888888", outline="", tags=self.tag
+            )
+            self.rect_id = self.canvas.create_rectangle(
+                self.x, self.y,
+                self.x + self.width, self.y + self.height,
+                fill=self.fill, outline=self.border_color, width=2, tags=self.tag
+            )
+
+        elif self.shape_type == "trapezoid":
+            top = (self.x, self.y)
+            bottom = (self.x, self.y + self.height)
+            top_right = (self.x + self.width, self.y + self.height * 0.2)
+            bottom_right = (self.x + self.width, self.y + self.height * 0.8)
+
+            shadow_points = [(x + shadow_offset, y + shadow_offset)
+                             for (x, y) in [top, bottom, bottom_right, top_right]]
+            self.canvas.create_polygon(*shadow_points, fill="#888888", outline="")
+
+            self.rect_id = self.canvas.create_polygon(
+                top, bottom, bottom_right, top_right,
+                fill=self.fill, outline=self.border_color, width=2, tags=self.tag
+            )
+
+        self.text_id = self.canvas.create_text(
+            self.x + self.width / 2,
+            self.y + self.height / 2,
+            text=self.label,
+            font=("Helvetica", 10, "bold"),
+            fill=self.text_color,
+            justify="center"
         )
-
-class ManualConnection:
-    def __init__(self, canvas, points, circle_radius=5, line_width=2, line_color="black", circle_color="black"):
-        """
-        points: lista de tuplas (x, y) que define los puntos del polilínea
-        Ejemplo: [(x1,y1), (x2,y2), (x3,y3)] -> dibuja línea entre (x1,y1)-(x2,y2) y (x2,y2)-(x3,y3)
-        """
-        self.canvas = canvas
-        self.points = points
-        self.circle_radius = circle_radius
-        self.line_width = line_width
-        self.line_color = line_color
-        self.circle_color = circle_color
-
-        self.line_ids = []
-        self.circle_ids = []
-
-    def draw(self):
-        # Dibuja líneas entre puntos consecutivos
-        for i in range(len(self.points) - 1):
-            x1, y1 = self.points[i]
-            x2, y2 = self.points[i + 1]
-            line_id = self.canvas.create_line(
-                x1, y1, x2, y2,
-                fill=self.line_color,
-                width=self.line_width
-            )
-            self.line_ids.append(line_id)
-
-        # Dibuja círculos en cada punto (menos opcionalmente el primero y último)
-        for (x, y) in self.points:
-            circle_id = self.canvas.create_oval(
-                x - self.circle_radius, y - self.circle_radius,
-                x + self.circle_radius, y + self.circle_radius,
-                fill=self.circle_color,
-                outline=""
-            )
-            self.circle_ids.append(circle_id)
-
-    def clear(self):
-        # Limpia líneas y círculos (para redibujar si quieres)
-        for lid in self.line_ids:
-            self.canvas.delete(lid)
-        for cid in self.circle_ids:
-            self.canvas.delete(cid)
-        self.line_ids = []
-        self.circle_ids = []
