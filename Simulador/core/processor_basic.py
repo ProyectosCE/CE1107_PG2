@@ -7,25 +7,28 @@ from core.stage_wb import WriteBackStage
 from components.register_file import RegisterFile
 from components.memory import Memory
 from core.instruction import Instruction
+from InOut.metrics import Metrics             
 
 class ProcessorBasic:
+    """Procesador sin unidad de hazards ni predicción de saltos."""
     def __init__(self):
         self.instr_mem = Memory(size_in_words=64)
-        self.data_mem = Memory(size_in_words=64)
-        self.pipeline = Pipeline()
+        self.data_mem  = Memory(size_in_words=64)
+        self.pipeline  = Pipeline()
 
-        self.if_stage = InstructionFetch(self.instr_mem)
+        self.if_stage  = InstructionFetch(self.instr_mem)
         self.registers = RegisterFile()
-        self.id_stage = InstructionDecodeBasic(self.registers)  # ← sin predictor/control
-        self.ex_stage = ExecuteStageBasic()                           # ← sin predictor
+        self.id_stage  = InstructionDecodeBasic(self.registers)
+        self.ex_stage  = ExecuteStageBasic()
         self.mem_stage = MemoryAccessStage(self.data_mem)
-        self.wb_stage = WriteBackStage(self.registers)
+        self.wb_stage  = WriteBackStage(self.registers)
+
+        self.metrics   = Metrics(name="Processor Básico")   
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):
             pc = i * 4
-            instr = Instruction(line, pc)
-            self.instr_mem.store_word(pc, instr)
+            self.instr_mem.store_word(pc, Instruction(line, pc))
 
     def preload_registers(self, values: dict):
         for reg, val in values.items():
@@ -36,30 +39,22 @@ class ProcessorBasic:
             self.data_mem.store_word(addr, val)
 
     def run(self):
-        print("=== Ejecución de ProcessorBasic (sin hazards, sin predicción) ===")
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
-            # 1. IF
+            self.metrics.tick()                      
+
             fetched = self.if_stage.fetch()
-            instr = fetched["instr"]
-            pc = fetched["pc"]
-            self.pipeline.step(instr, pc)
+            self.pipeline.step(fetched["instr"], fetched["pc"])
 
-            # 2. ID
-            if_id = self.pipeline.IF_ID
-            id_ex = self.id_stage.decode(if_id)
-
-            # 3. EX
+            if_id  = self.pipeline.IF_ID
+            id_ex  = self.id_stage.decode(if_id)
             ex_mem = self.ex_stage.execute(id_ex)
-
-            # 4. MEM
             mem_wb = self.mem_stage.access(ex_mem)
-
-            # 5. WB
             self.wb_stage.write_back(mem_wb)
 
-            # Imprimir estado del ciclo
+            self.metrics.track_writeback(mem_wb["instr"])
+
             print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
             print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
 
@@ -84,4 +79,8 @@ class ProcessorBasic:
             else:
                 print("MEM_WB: nop")
 
-        print("\n Programa finalizado (ProcessorBasic). Pipeline vacío.")
+        print("\nPrograma finalizado (ProcessorBasic). Pipeline vacío.")
+        self.metrics.display()                         
+
+    def get_metrics(self):
+        return self.metrics

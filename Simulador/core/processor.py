@@ -29,7 +29,7 @@ class Processor:
         self.mem_stage = MemoryAccessStage(self.data_mem)
         self.wb_stage = WriteBackStage(self.registers)
 
-        self.metrics = Metrics()  
+        self.metrics = Metrics(name="Procesador Completo")  
 
     def load_program(self, instr_list: list[str]):
         for i, line in enumerate(instr_list):
@@ -46,7 +46,6 @@ class Processor:
             self.data_mem.store_word(addr, val)
 
     def run(self):
-        print("Iniciando simulación del procesador (IF → ID → EX → MEM → WB)...\n")
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
@@ -110,6 +109,9 @@ class Processor:
             else:
                 print("MEM_WB: nop")
 
-        print("\nPrograma finalizado. Pipeline vacío.")
+        print("\nPrograma finalizado (Procesador Completo). Pipeline vacío.")
 
-        self.metrics.report()
+        self.metrics.display()
+
+    def get_metrics(self):
+        return self.metrics
