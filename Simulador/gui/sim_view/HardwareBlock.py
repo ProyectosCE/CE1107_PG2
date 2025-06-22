@@ -1,5 +1,5 @@
 class HardwareBlock:
-    def __init__(self, canvas, x, y, width, height, label, fill="lightgray"):
+    def __init__(self, canvas, x, y, width, height, label, fill="lightgray", tags=None):
         self.canvas = canvas
         self.x, self.y = x, y
         self.width, self.height = width, height
@@ -7,13 +7,20 @@ class HardwareBlock:
         self.fill = fill
         self.rect_id = None
         self.text_id = None
+        if tags is None:
+            self.tag = None
+        elif isinstance(tags, (list, tuple)):
+            self.tag = tags[0]  # primer tag de la lista/tupla
+        else:
+            self.tag = tags  # era un string
 
     def draw(self):
         self.rect_id = self.canvas.create_rectangle(
             self.x, self.y,
             self.x + self.width, self.y + self.height,
-            fill=self.fill, outline="black", width=2
+            fill=self.fill, outline="black", width=2, tags=self.tag
         )
+
         self.text_id = self.canvas.create_text(
             self.x + self.width / 2,
             self.y + self.height / 2,

@@ -57,6 +57,53 @@ class RiscVSimulatorApp(tk.Tk):
 
     """
     ======================================================================
+                                API de simulación
+    ======================================================================
+    """
+
+    def _step_backward(self):
+        # Falta para implementar el paso atrás
+        print("Step backward un ciclo")
+
+    def _step_forward(self):
+        print("Step forward un ciclo")
+
+    def _start_timed_exec(self):
+        ms = int(self.interval_spin.get())
+        print(f"Ejecución continua: un ciclo cada {ms} ms")
+
+    def _run_full_exec(self):
+        print("Ejecutar hasta el final")
+
+    def _stop_timed_exec(self):
+        print("Detener ejecución continua")
+
+    def _reset_simulation(self):
+        """Reinicia la simulación, limpiando el código y el estado de las vistas."""
+        print("Reiniciar simulación")
+
+    def highlight_for_sim(self, sim_number: int, unit_tag: str):
+        """
+        Resalta en la vista activa que corresponda a sim_number (1..4).
+        Si la vista no está activa, no hace nada.
+        """
+        sim_idx = sim_number - 1
+        frame = self._tabs.get(sim_idx)
+        if frame:
+            frame.highlight(unit_tag)
+
+    def clear_highlight_for_sim(self, sim_number: int):
+        """
+        Limpia el resaltado en la vista activa que corresponda a sim_number (1..4).
+        Si la vista no está activa, no hace nada.
+        """
+        sim_idx = sim_number - 1
+        frame = self._tabs.get(sim_idx)
+        if frame:
+            frame.clear_highlights()
+
+    """
+    ======================================================================
                              Menú de configuración
     ======================================================================
     """
@@ -173,27 +220,18 @@ class RiscVSimulatorApp(tk.Tk):
 
         # e) Reset
         tk.Button(bar, text="Reset", command=self._reset_simulation).pack(side="left", padx=2)
-    # Callbacks
-    def _step_backward(self):
-        # Falta para implementar el paso atrás
-        print("Step backward un ciclo")
 
-    def _step_forward(self):
-        print("Step forward un ciclo")
+        """PRUEBA HIGHLIGHT - Borrar despues"""
 
-    def _start_timed_exec(self):
-        ms = int(self.interval_spin.get())
-        print(f"Ejecución continua: un ciclo cada {ms} ms")
+        tk.Button(bar, text="Test H1", command=self.highlight_test).pack(side="left")
+        tk.Button(bar, text="Test H2", command=lambda: self.clear_highlight_for_sim(1)).pack(side="left")
 
-    def _run_full_exec(self):
-        print("Ejecutar hasta el final")
+    '''PRUEBA HIGHLIGHT - Borrar despues'''
+    def highlight_test(self):
+        """Prueba de resaltado en la vista 1."""
+        self.highlight_for_sim(1, "alu")
+        self.highlight_for_sim(1, "register_file")
 
-    def _stop_timed_exec(self):
-        print("Detener ejecución continua")
-
-    def _reset_simulation(self):
-        """Reinicia la simulación, limpiando el código y el estado de las vistas."""
-        print("Reiniciar simulación")
 
     """
     ======================================================================

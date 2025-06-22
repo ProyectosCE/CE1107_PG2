@@ -67,13 +67,12 @@ class BaseSimView(tk.Frame, ABC):
     def _on_pan_move(self, event):
         self.canvas.scan_dragto(event.x, event.y, gain=1)
 
-
-
     def highlight(self, unit):
-        self.clear_highlights()
-        tag = self.units.get(unit)
-        if tag:
-            self.canvas.itemconfig(tag, fill="yellow")
+        block = self.units.get(unit)
+        if block and block.tag:
+            self.canvas.itemconfig(block.tag, fill="lightblue")
+
     def clear_highlights(self):
-        for tag in self.units.values():
-            self.canvas.itemconfig(tag, fill="lightblue")
+        for block in self.units.values():
+            if block.tag:
+                self.canvas.itemconfig(block.tag, fill="lightgray")
