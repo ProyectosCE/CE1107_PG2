@@ -24,8 +24,10 @@ class RiscVSimulatorApp(tk.Tk):
 
         self.code_frame = tk.Frame(self.paned, bd=1, relief="solid")
         self.sim_frame = tk.Frame(self.paned, bd=1, relief="solid")
-        self.status_frame1 = tk.Frame(self.paned, bd=1, relief="solid")
-        self.status_frame2 = tk.Frame(self.paned, bd=1, relief="solid")
+        self.status_frame1 = tk.Frame(self.paned, width=180, bd=1, relief="solid")
+        self.status_frame1.pack_propagate(False)
+        self.status_frame2 = tk.Frame(self.paned, width=180, bd=1, relief="solid")
+        self.status_frame2.pack_propagate(False)
 
         self.paned.add(self.code_frame, weight=1)
         self.paned.add(self.sim_frame, weight=2)
@@ -154,8 +156,14 @@ class RiscVSimulatorApp(tk.Tk):
         # c) Ejecución completa
         tk.Button(bar, text="Run-All", command=self._run_full_exec).pack(side="left", padx=2)
 
+        # d) Detener ejecución continua
+        tk.Button(bar, text="Stop", command=self._stop_timed_exec).pack(side="left", padx=2)
+
+        # e) Reset
+        tk.Button(bar, text="Reset", command=self._reset_simulation).pack(side="left", padx=2)
     # Callbacks
     def _step_backward(self):
+        # Falta para implementar el paso atrás
         print("Step backward un ciclo")
 
     def _step_forward(self):
@@ -168,6 +176,13 @@ class RiscVSimulatorApp(tk.Tk):
     def _run_full_exec(self):
         print("Ejecutar hasta el final")
 
+    def _stop_timed_exec(self):
+        print("Detener ejecución continua")
+
+    def _reset_simulation(self):
+        """Reinicia la simulación, limpiando el código y el estado de las vistas."""
+        print("Reiniciar simulación")
+
     """
     ======================================================================
                              Seccion de código
@@ -177,7 +192,6 @@ class RiscVSimulatorApp(tk.Tk):
         tk.Label(self.code_frame, text="Código RISC-V", font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
         self.code_space = tk.Text(self.code_frame, width=30)
         self.code_space.pack(expand=True, fill="both", padx=5, pady=5)
-
 
 
     """
@@ -208,7 +222,8 @@ class RiscVSimulatorApp(tk.Tk):
 
         if len(vistas_activas) >= 1:
             self.view_status_1.set_view_name(f"Sim {vistas_activas[0] + 1}")
-            self.view_status_1.update_status(0, 0.0, 0, [0] * 8)
+            # Actualiza el estado inicial de la vista 1
+            self.view_status_1.update_status(0, 0.0, 0, [0] * 8, {i: 0 for i in range(8)})
             if not self.view_status_1.winfo_ismapped():
                 self.view_status_1.pack(fill="both", expand=True)
         else:
@@ -217,7 +232,9 @@ class RiscVSimulatorApp(tk.Tk):
 
         if len(vistas_activas) == 2:
             self.view_status_2.set_view_name(f"Sim {vistas_activas[1] + 1}")
-            self.view_status_2.update_status(0, 0.0, 0, [0] * 8)
+            # Actualiza el estado inicial de la vista 2
+            self.view_status_2.update_status(0, 0.0, 0, [0] * 8, {i: 0 for i in range(8)})
+
             if not self.view_status_2.winfo_ismapped():
                 self.view_status_2.pack(fill="both", expand=True)
         else:
