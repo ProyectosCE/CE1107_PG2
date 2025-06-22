@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 # Importación de vistas
-from sim_view import ALL_VIEWS
-from view_status import ViewStatus
+from .sim_view import ALL_VIEWS
+from .view_status import ViewStatus
 
 
 class RiscVSimulatorApp(tk.Tk):
