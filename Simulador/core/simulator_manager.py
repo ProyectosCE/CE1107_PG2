@@ -7,6 +7,7 @@ import copy
 from core.processor import Processor
 from core.processor_basic import ProcessorBasic
 from core.processor_no_hazards import ProcessorNoHazards
+from core.processor_no_predictor import ProcessorNoPredictor
 from InOut.metrics import Metrics
 
 class SimulatorManager:
@@ -17,6 +18,7 @@ class SimulatorManager:
         self.cpu_full = Processor()
         self.cpu_basic = ProcessorBasic()
         self.cpu_no_hazards = ProcessorNoHazards()
+        self.cpu_no_predictor = ProcessorNoPredictor()
 
         # Métricas
         self.metrics_full = Metrics(name="Processor Completo")
@@ -28,6 +30,7 @@ class SimulatorManager:
         self.cpu_full.load_program(self.program_lines)
         self.cpu_basic.load_program(copy.deepcopy(self.program_lines))
         self.cpu_no_hazards.load_program(copy.deepcopy(self.program_lines))
+        self.cpu_no_predictor.load_program(copy.deepcopy(self.program_lines))
 
         # Ejecutar cada uno
         print("\n=== Ejecutando procesador completo ===")
@@ -38,5 +41,8 @@ class SimulatorManager:
 
         print("\n=== Ejecutando procesador sin unidad de hazards (con forwarding) ===")
         self.cpu_no_hazards.run()
+
+        print("\n=== Ejecutando procesador sin unidad de predicción (con hazards) ===")
+        self.cpu_no_predictor.run()
 
         print("\n=== Comparación completada ===")
