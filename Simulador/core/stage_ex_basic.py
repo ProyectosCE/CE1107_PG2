@@ -2,12 +2,15 @@
 ExecuteStageBasic: Etapa EX sin predicción de saltos
 """
 
+import time
+from config import LATENCY_EX
+
 class ExecuteStageBasic:
-    def __init__(self):
+    def __init__(self, latency: float = None):
         """
         Versión básica de la etapa EX: sin lógica de predicción de saltos.
         """
-        pass
+        self.latency = latency if latency is not None else LATENCY_EX
 
     def execute(self, id_ex: dict) -> dict:
         instr = id_ex["instr"]
@@ -51,6 +54,7 @@ class ExecuteStageBasic:
         else:
             raise ValueError(f"Operación no soportada: {opcode}")
 
+        time.sleep(self.latency)
         return {
             "instr": instr,
             "alu_result": alu_result,

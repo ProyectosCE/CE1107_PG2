@@ -11,6 +11,8 @@ Consulta el archivo LICENSE para más detalles.
 
 from core.instruction import Instruction
 from components.memory import Memory
+import time
+from config import LATENCY_IF
 
 """
 Class: InstructionFetch
@@ -37,7 +39,7 @@ Example:
 """
 
 class InstructionFetch:
-    def __init__(self, instruction_memory: Memory):
+    def __init__(self, instruction_memory: Memory, latency: float = None):
         """
         Function: __init__
         Inicializa la etapa IF con acceso a la memoria de instrucciones.
@@ -49,6 +51,7 @@ class InstructionFetch:
         self.instr_mem = instruction_memory
         self.pc = 0  # PC inicia en 0
         self.halted = False
+        self.latency = latency if latency is not None else LATENCY_IF
 
     def fetch(self) -> dict:
         """
@@ -75,6 +78,7 @@ class InstructionFetch:
 
         current_pc = self.pc
         self.pc += 4  # Avanza a la siguiente instrucción
+        time.sleep(self.latency)
 
         return {"instr": instr, "pc": current_pc}
 

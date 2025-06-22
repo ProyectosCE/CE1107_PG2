@@ -1,8 +1,11 @@
 from components.branch_predictor import BranchPredictor
+import time
+from config import LATENCY_EX
 
 class ExecuteStage:
-    def __init__(self, branch_predictor: BranchPredictor):
+    def __init__(self, branch_predictor: BranchPredictor, latency: float = None):
         self.branch_predictor = branch_predictor
+        self.latency = latency if latency is not None else LATENCY_EX
 
     def execute(self, id_ex: dict) -> dict:
         instr = id_ex["instr"]
@@ -63,6 +66,7 @@ class ExecuteStage:
                 flush_required = True
                 print(f"Predicción incorrecta @ PC={pc} → FLUSH requerido")
 
+        time.sleep(self.latency)
         return {
             "instr": instr,
             "alu_result": alu_result,

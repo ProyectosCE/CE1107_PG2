@@ -1,8 +1,11 @@
+import time
 from components.register_file import RegisterFile
+from config import LATENCY_WB
 
 class WriteBackStage:
-    def __init__(self, register_file: RegisterFile):
+    def __init__(self, register_file: RegisterFile, latency: float = None):
         self.reg_file = register_file
+        self.latency = latency if latency is not None else LATENCY_WB
 
     def write_back(self, mem_wb: dict):
         instr = mem_wb["instr"]
@@ -21,4 +24,5 @@ class WriteBackStage:
         else:
             value = mem_wb.get("alu_result")
 
+        time.sleep(self.latency)
         self.reg_file.write(rd, value)

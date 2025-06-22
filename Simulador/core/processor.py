@@ -19,16 +19,16 @@ class Processor:
         self.data_mem = Memory(size_in_words=64)
         self.pipeline = Pipeline()
 
-        self.if_stage = InstructionFetch(self.instr_mem)
+        self.if_stage = InstructionFetch(self.instr_mem, latency=None)
         self.registers = RegisterFile()
         self.hazard_unit = HazardUnit()
         self.branch_predictor = BranchPredictor()
         self.control_unit = ControlUnit()
 
-        self.id_stage = InstructionDecode(self.registers, self.branch_predictor, self.control_unit)
-        self.ex_stage = ExecuteStage(self.branch_predictor)
-        self.mem_stage = MemoryAccessStage(self.data_mem)
-        self.wb_stage = WriteBackStage(self.registers)
+        self.id_stage = InstructionDecode(self.registers, self.branch_predictor, self.control_unit, latency=None)
+        self.ex_stage = ExecuteStage(self.branch_predictor, latency=None)
+        self.mem_stage = MemoryAccessStage(self.data_mem, latency=None)
+        self.wb_stage = WriteBackStage(self.registers, latency=None)
 
         self.metrics = Metrics(name="Procesador Completo")  
 

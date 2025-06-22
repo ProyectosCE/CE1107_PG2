@@ -43,17 +43,17 @@ class ProcessorNoPredictor:
         self.pipeline  = Pipeline()
 
         # Etapas
-        self.if_stage  = InstructionFetch(self.instr_mem)
+        self.if_stage  = InstructionFetch(self.instr_mem, latency=None)
         self.registers = RegisterFile()
         self.hazard_unit = HazardUnit()          # detecta riesgos → stalls
         self.control_unit = ControlUnit()
         self.branch_predictor = NullBranchPredictor()
 
         from core.stage_ex_basic import ExecuteStageBasic  # base para ALU
-        self.id_stage  = InstructionDecode(self.registers, self.branch_predictor, self.control_unit)
-        self.ex_stage  = ExecuteStageNoPredictor()
-        self.mem_stage = MemoryAccessStage(self.data_mem)
-        self.wb_stage  = WriteBackStage(self.registers)
+        self.id_stage  = InstructionDecode(self.registers, self.branch_predictor, self.control_unit, latency=None)
+        self.ex_stage  = ExecuteStageNoPredictor(latency=None)
+        self.mem_stage = MemoryAccessStage(self.data_mem, latency=None)
+        self.wb_stage  = WriteBackStage(self.registers, latency=None)
 
         self.metrics   = Metrics(name="Processor sin Predictor (con hazards)")
 

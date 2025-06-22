@@ -20,12 +20,12 @@ class ProcessorNoHazards:
         self.data_mem = Memory(size_in_words=64)
         self.pipeline = Pipeline()
 
-        self.if_stage = InstructionFetch(self.instr_mem)
+        self.if_stage = InstructionFetch(self.instr_mem, latency=None)
         self.registers = RegisterFile()
-        self.id_stage = InstructionDecodeBasic(self.registers)  # Sin unidad de control/predictor
-        self.ex_stage = ExecuteStageBasic()                     # Sin predicción
-        self.mem_stage = MemoryAccessStage(self.data_mem)
-        self.wb_stage = WriteBackStage(self.registers)
+        self.id_stage = InstructionDecodeBasic(self.registers, latency=None)  # Sin unidad de control/predictor
+        self.ex_stage = ExecuteStageBasic(latency=None)                     # Sin predicción
+        self.mem_stage = MemoryAccessStage(self.data_mem, latency=None)
+        self.wb_stage = WriteBackStage(self.registers, latency=None)
 
         self.metrics = Metrics(name="Processor Sin Unidad de Riesgos")
 
