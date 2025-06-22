@@ -8,6 +8,7 @@ from components.register_file import RegisterFile
 from components.memory import Memory
 from core.instruction import Instruction
 from InOut.metrics import Metrics             
+import time
 
 class ProcessorBasic:
     """Procesador sin unidad de hazards ni predicción de saltos."""
@@ -38,7 +39,13 @@ class ProcessorBasic:
         for addr, val in values.items():
             self.data_mem.store_word(addr, val)
 
-    def run(self):
+    def run(self, modo="full", delay_seg=1.0):
+        """
+        Ejecuta el procesador en diferentes modos:
+        - modo="full": ejecución inmediata (por defecto)
+        - modo="step": paso a paso, espera input del usuario
+        - modo="delay": espera delay_seg segundos entre ciclos
+        """
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
@@ -78,6 +85,13 @@ class ProcessorBasic:
                 print(f"MEM_WB: {mem_wb['instr'].opcode}, ALU result = {mem_wb['alu_result']}")
             else:
                 print("MEM_WB: nop")
+
+            # --- Modo de ejecución ---
+            if modo == "step":
+                input("Presione Enter para continuar al siguiente ciclo...")
+            elif modo == "delay":
+                time.sleep(delay_seg)
+            # modo "full" no hace nada extra
 
         print("\nPrograma finalizado (ProcessorBasic). Pipeline vacío.")
         self.metrics.display()                         

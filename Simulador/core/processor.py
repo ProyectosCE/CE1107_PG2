@@ -11,6 +11,7 @@ from components.branch_predictor import BranchPredictor
 from components.control_unit import ControlUnit  
 from core.instruction import Instruction
 from InOut.metrics import Metrics  
+import time
 
 class Processor:
     def __init__(self):
@@ -45,7 +46,13 @@ class Processor:
         for addr, val in values.items():
             self.data_mem.store_word(addr, val)
 
-    def run(self):
+    def run(self, modo="full", delay_seg=1.0):
+        """
+        Ejecuta el procesador en diferentes modos:
+        - modo="full": ejecución inmediata (por defecto)
+        - modo="step": paso a paso, espera input del usuario
+        - modo="delay": espera delay_seg segundos entre ciclos
+        """
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
@@ -108,6 +115,13 @@ class Processor:
                 print(f"MEM_WB: {mem_wb['instr'].opcode}, ALU result = {mem_wb['alu_result']}")
             else:
                 print("MEM_WB: nop")
+
+            # --- Modo de ejecución ---
+            if modo == "step":
+                input("Presione Enter para continuar al siguiente ciclo...")
+            elif modo == "delay":
+                time.sleep(delay_seg)
+            # modo "full" no hace nada extra
 
         print("\nPrograma finalizado (Procesador Completo). Pipeline vacío.")
 

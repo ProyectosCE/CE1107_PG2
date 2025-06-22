@@ -9,6 +9,8 @@ from components.hazard_unit import HazardUnit
 from components.control_unit import ControlUnit
 from InOut.metrics import Metrics
 from core.instruction import Instruction
+import time
+
 class NullBranchPredictor:
     def predict(self, pc):
         return {"taken": False}
@@ -68,7 +70,13 @@ class ProcessorNoPredictor:
         for a, v in values.items():
             self.data_mem.store_word(a, v)
 
-    def run(self):
+    def run(self, modo="full", delay_seg=1.0):
+        """
+        Ejecuta el procesador en diferentes modos:
+        - modo="full": ejecución inmediata (por defecto)
+        - modo="step": paso a paso, espera input del usuario
+        - modo="delay": espera delay_seg segundos entre ciclos
+        """
         self.pipeline.init_pipeline()
 
         while not self.pipeline.is_done():
@@ -97,6 +105,38 @@ class ProcessorNoPredictor:
             mem_wb = self.mem_stage.access(ex_mem)
             self.wb_stage.write_back(mem_wb)
             self.metrics.track_writeback(mem_wb["instr"])
+
+            # Imprimir estado por etapa
+            print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
+            print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
+
+            if id_ex["instr"].opcode != "nop":
+                print(f"ID_EX: {id_ex['instr'].opcode}, rs1={id_ex['rs1']}={id_ex['rs1_val']}, "
+                      f"rs2={id_ex['rs2']}={id_ex['rs2_val']}, imm={id_ex['imm']}, rd={id_ex['rd']}")
+            else:
+                print("ID_EX: nop")
+
+            if ex_mem["instr"].opcode != "nop":
+                print(f"EX_MEM: {ex_mem['instr'].opcode}, ALU={ex_mem['alu_result']}, "
+                      f"branch_taken={ex_mem['branch_taken']}, target={ex_mem['target_address']}")
+            else:
+                print("EX_MEM: nop")
+
+            if mem_wb["instr"].opcode == "lw":
+                print(f"MEM_WB: lw → {mem_wb['rd']} = {mem_wb['mem_data']}")
+            elif mem_wb["instr"].opcode == "sw":
+                print(f"MEM_WB: sw → mem[{ex_mem['alu_result']}] = {ex_mem['rs2_val']}")
+            elif mem_wb["instr"].opcode != "nop":
+                print(f"MEM_WB: {mem_wb['instr'].opcode}, ALU result = {mem_wb['alu_result']}")
+            else:
+                print("MEM_WB: nop")
+
+            # --- Modo de ejecución ---
+            if modo == "step":
+                input("Presione Enter para continuar al siguiente ciclo...")
+            elif modo == "delay":
+                time.sleep(delay_seg)
+            # modo "full" no hace nada extra
 
         print("\n Programa finalizado (ProcessorNoPredictor). Pipeline vacío.")
         self.metrics.display()
