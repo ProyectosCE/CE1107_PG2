@@ -11,6 +11,13 @@ class RiscVSimulatorApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Simulador RISC-V")
+
+        try:
+            self.state("zoomed")          # Windows / X11
+        except tk.TclError:
+            self.attributes("-zoomed", True)  # fallback en algunos Tk
+
+
         self.minsize(width=1500, height=600)
 
         self.active_views = [True, True, False, False]
@@ -24,15 +31,17 @@ class RiscVSimulatorApp(tk.Tk):
 
         self.code_frame = tk.Frame(self.paned, bd=1, relief="solid")
         self.sim_frame = tk.Frame(self.paned, bd=1, relief="solid")
-        self.status_frame1 = tk.Frame(self.paned, width=180, bd=1, relief="solid")
+        self.status_frame1 = tk.Frame(self.paned, width=250, bd=1, relief="solid")
         self.status_frame1.pack_propagate(False)
-        self.status_frame2 = tk.Frame(self.paned, width=180, bd=1, relief="solid")
+        self.status_frame2 = tk.Frame(self.paned, width=250, bd=1, relief="solid")
         self.status_frame2.pack_propagate(False)
 
+        # Añade los frames (sin minsize)
         self.paned.add(self.code_frame, weight=1)
-        self.paned.add(self.sim_frame, weight=2)
-        self.paned.add(self.status_frame1, weight=1)
-        self.paned.add(self.status_frame2, weight=1)
+        self.paned.add(self.sim_frame, weight=4)
+        self.paned.add(self.status_frame1, weight=0)
+        self.paned.add(self.status_frame2, weight=0)
+
 
         self._create_code_area()
         self._create_simulation_area()
@@ -69,11 +78,11 @@ class RiscVSimulatorApp(tk.Tk):
         # Ventana modal para escoger exactamente 2 vistas.
         cfg = tk.Toplevel(self)
         cfg.title("Opciones de configuración")
-        cfg.geometry("320x260")
+        cfg.geometry("400x250")
         cfg.grab_set()
 
         tk.Label(cfg,
-                 text="Selecciona exactamente 2 vistas:",
+                 text="Selecciona exactamente 2 sims:",
                  font=("Arial", 11, "bold")).pack(pady=(10, 5))
 
         # Variables ligadas al estado actual
@@ -82,7 +91,10 @@ class RiscVSimulatorApp(tk.Tk):
         # Orden histórico de selección (las que ya estaban activas primero)
         self._selection_order = [i for i, v in enumerate(self.active_views) if v]
 
-        textos = ["Sim 1", "Sim 2", "Sim 3", "Sim 4"]
+        textos = ["Sim 1 (sin unidad de riesgos)",
+                  "Sim 2 (con unidad de riesgos )",
+                  "Sim 3 (con predicción de saltos)",
+                  "Sim 4 (con unidad de riesgos con predicción de saltos)"]
         for idx, (txt, var) in enumerate(zip(textos, self._opt_vars)):
             tk.Checkbutton(cfg,
                            text=txt,
