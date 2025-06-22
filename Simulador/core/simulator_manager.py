@@ -1,11 +1,12 @@
 """
-SimulatorManager: ejecuta dos versiones del procesador RISC-V en paralelo
-para comparar sus resultados (básico vs completo).
+SimulatorManager: ejecuta múltiples versiones del procesador RISC-V en paralelo
+para comparar sus resultados (básico, sin hazards, completo).
 """
 
 import copy
 from core.processor import Processor
 from core.processor_basic import ProcessorBasic
+from core.processor_no_hazards import ProcessorNoHazards
 from InOut.metrics import Metrics
 
 class SimulatorManager:
@@ -15,21 +16,27 @@ class SimulatorManager:
         # Inicializar procesadores
         self.cpu_full = Processor()
         self.cpu_basic = ProcessorBasic()
+        self.cpu_no_hazards = ProcessorNoHazards()
 
         # Métricas
         self.metrics_full = Metrics(name="Processor Completo")
         self.metrics_basic = Metrics(name="Processor Básico")
+        self.metrics_no_hazards = Metrics(name="Processor Sin Hazards")
 
     def load_and_run(self):
-        # Parsear y cargar en ambos procesadores
+        # Parsear y cargar en todos los procesadores
         self.cpu_full.load_program(self.program_lines)
         self.cpu_basic.load_program(copy.deepcopy(self.program_lines))
+        self.cpu_no_hazards.load_program(copy.deepcopy(self.program_lines))
 
-        # Ejecutar ambos
+        # Ejecutar cada uno
         print("\n=== Ejecutando procesador completo ===")
         self.cpu_full.run()
 
         print("\n=== Ejecutando procesador básico (sin hazards ni predicción) ===")
         self.cpu_basic.run()
+
+        print("\n=== Ejecutando procesador sin unidad de hazards (con forwarding) ===")
+        self.cpu_no_hazards.run()
 
         print("\n=== Comparación completada ===")
