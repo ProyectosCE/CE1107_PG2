@@ -337,6 +337,43 @@ class RiscVSimulatorApp(tk.Tk):
     def _reset_simulation(self):
         """Reinicia la simulación, limpiando el código y el estado de las vistas."""
         print("Reiniciar simulación")
+        # 1. Borra el área de código
+        self.code_space.delete("1.0", tk.END)
+
+        # 2. Valores por defecto para las vistas de estado
+        estado_pipeline_inicial = {
+            "IF_ID": "nop",
+            "ID_EX": "nop",
+            "EX_MEM": "nop",
+            "MEM_WB": "nop"
+        }
+        default_regs = [[i, 0] for i in range(32)]
+        default_mem = [[i * 4, 0] for i in range(32)]
+        default_metrics = (0, 0, 0, 0, 0, 0)
+        default_ciclo = 0
+        default_tiempo = 0.0
+        default_pc = 0
+
+        # 3. Refresca las vistas activas
+        vistas_activas = [i for i, v in enumerate(self.active_views) if v]
+        if len(vistas_activas) >= 1:
+            self.view_status_1.set_view_name(f"Sim {vistas_activas[0] + 1}")
+            self.view_status_1.update_system_state(default_ciclo, default_tiempo, default_pc)
+            self.view_status_1.update_registers({f"x{i}": 0 for i in range(32)})
+            self.view_status_1.update_memory(default_mem)
+            self.view_status_1.update_metrics(*default_metrics)
+            self.view_status_1.update_pipeline(estado_pipeline_inicial, ciclo=0)
+        if len(vistas_activas) == 2:
+            self.view_status_2.set_view_name(f"Sim {vistas_activas[1] + 1}")
+            self.view_status_2.update_system_state(default_ciclo, default_tiempo, default_pc)
+            self.view_status_2.update_registers({f"x{i}": 0 for i in range(32)})
+            self.view_status_2.update_memory(default_mem)
+            self.view_status_2.update_metrics(*default_metrics)
+            self.view_status_2.update_pipeline(estado_pipeline_inicial, ciclo=0)
+
+        # 4. Limpia historial
+        self._history = {1: deque(maxlen=10), 2: deque(maxlen=10)}
+        self._refresh_history_window()
 
     def highlight_for_sim(self, sim_number: int, unit_tag: str):
         """
