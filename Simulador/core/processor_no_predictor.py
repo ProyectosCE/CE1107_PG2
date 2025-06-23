@@ -71,12 +71,7 @@ class ProcessorNoPredictor:
             self.data_mem.store_word(a, v)
 
     def run(self, modo="full", delay_seg=1.0):
-        """
-        Ejecuta el procesador en diferentes modos:
-        - modo="full": ejecución inmediata (por defecto)
-        - modo="step": paso a paso, espera input del usuario
-        - modo="delay": espera delay_seg segundos entre ciclos
-        """
+        self.metrics.start_timer()
         self.pipeline.init_pipeline()
 
         last_ex_mem = None
@@ -124,7 +119,12 @@ class ProcessorNoPredictor:
                 time.sleep(delay_seg)
             # modo "full" no hace nada extra
 
+        self.metrics.stop_timer()
         print("\n Programa finalizado (ProcessorNoPredictor). Pipeline vacío.")
+        self.metrics.display()
+
+    def get_metrics(self):
+        return self.metrics
         self.metrics.display()
 
     def get_metrics(self):

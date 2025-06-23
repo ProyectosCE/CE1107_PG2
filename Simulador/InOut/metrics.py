@@ -1,4 +1,5 @@
 from core.instruction import Instruction
+import time
 
 class Metrics:
     def __init__(self, name=""):
@@ -10,6 +11,19 @@ class Metrics:
         self.instrucciones_retiradas = 0
         self.branches_totales = 0
         self.branches_acertados = 0
+        self.start_time = None
+        self.end_time = None
+
+    def start_timer(self):
+        self.start_time = time.perf_counter()
+
+    def stop_timer(self):
+        self.end_time = time.perf_counter()
+
+    def get_elapsed_time(self):
+        if self.start_time is not None and self.end_time is not None:
+            return self.end_time - self.start_time
+        return 0.0
 
     def tick(self):
         """Incrementa el conteo de ciclos."""
@@ -54,3 +68,7 @@ class Metrics:
             print(f"  Precisión del predictor     : {accuracy:.2f}%")
         else:
             print("  No se ejecutaron instrucciones de salto.")
+
+        # --- Nueva métrica: tiempo de ejecución ---
+        elapsed = self.get_elapsed_time()
+        print(f"  Tiempo de ejecución (s)     : {elapsed:.6f}")

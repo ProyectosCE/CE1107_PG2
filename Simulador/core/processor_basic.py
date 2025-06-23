@@ -40,12 +40,7 @@ class ProcessorBasic:
             self.data_mem.store_word(addr, val)
 
     def run(self, modo="full", delay_seg=1.0):
-        """
-        Ejecuta el procesador en diferentes modos:
-        - modo="full": ejecución inmediata (por defecto)
-        - modo="step": paso a paso, espera input del usuario
-        - modo="delay": espera delay_seg segundos entre ciclos
-        """
+        self.metrics.start_timer()
         self.pipeline.init_pipeline()
 
         last_ex_mem = None
@@ -81,7 +76,12 @@ class ProcessorBasic:
             elif modo == "delay":
                 time.sleep(delay_seg)
             # modo "full" no hace nada extra
+        self.metrics.stop_timer()
+        print("\nPrograma finalizado (ProcessorBasic). Pipeline vacío.")
+        self.metrics.display()                         
 
+    def get_metrics(self):
+        return self.metrics
         print("\nPrograma finalizado (ProcessorBasic). Pipeline vacío.")
         self.metrics.display()                         
 
