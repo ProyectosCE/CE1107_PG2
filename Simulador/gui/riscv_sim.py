@@ -88,8 +88,10 @@ class RiscVSimulatorApp(tk.Tk):
         print("Step forward un ciclo")
 
     def _start_timed_exec(self):
-        ms = int(self.interval_spin.get())
-        print(f"Ejecución continua: un ciclo cada {ms} ms")
+        # Aquí iría la lógica de ejecución paso a paso/ritmo, pero ahora solo un placeholder.
+        print("Ejecución rítmica (no implementada, use Run-All para ejecución completa)")
+
+    def _run_full_exec(self):
         code = self.code_space.get("1.0", tk.END)
         # Obtener solo líneas de código ensamblador limpias (sin comentarios, sin etiquetas)
         raw_lines = [line for line in code.splitlines() if line.strip()]
@@ -122,28 +124,38 @@ class RiscVSimulatorApp(tk.Tk):
             print(f"Error al inicializar el simulador: {e}")
             return
 
-        for i, idx in enumerate(self.active_indices):
-            cpu_name = manager.cpu_names[idx]
+        # Mapear correctamente cada simulador activo a su vista (view_status_1 o view_status_2)
+        for view_idx, sim_idx in enumerate(self.active_indices):
+            cpu_name = manager.cpu_names[sim_idx]
             try:
-                manager.cpus[i].load_program(program_lines)
-                manager.cpus[i].run(modo="full", delay_seg=ms/1000.0)
-                metrics = manager.cpus[i].metrics
+                manager.cpus[view_idx].load_program(program_lines)
+                manager.cpus[view_idx].run(modo="full", delay_seg=0)
+                metrics = manager.cpus[view_idx].metrics
+
+                ciclos = metrics.ciclos_totales
+                inst = metrics.instrucciones_retiradas
+                cpi = metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0
+                branch_total = metrics.branches_totales
+                branch_acertados = metrics.branches_acertados
+
                 print(f"\n--- Métricas para {cpu_name} ---")
-                print(f"Ciclos totales: {metrics.ciclos_totales}")
-                print(f"Instrucciones retiradas: {metrics.instrucciones_retiradas}")
-                print(f"CPI: {metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0:.2f}")
-                print(f"Branches totales: {metrics.branches_totales}")
-                print(f"Branches acertados: {metrics.branches_acertados}")
+                print(f"Ciclos totales: {ciclos}")
+                print(f"Instrucciones retiradas: {inst}")
+                print(f"CPI: {cpi:.2f}")
+                print(f"Branches totales: {branch_total}")
+                print(f"Branches acertados: {branch_acertados}")
                 if metrics.branches_totales:
                     precision = (metrics.branches_acertados / metrics.branches_totales) * 100
                 else:
                     precision = 0.0
                 print(f"Precisión del predictor: {precision:.2f}%")
+
+                # sim_idx es el índice real de la simulación (0..3), pero las vistas son 0 o 1
+                # Usar view_idx+1 como número de vista (1 o 2)
+                self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
+
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
-
-    def _run_full_exec(self):
-        print("Ejecutar hasta el final")
 
     def _stop_timed_exec(self):
         print("Detener ejecución continua")
@@ -172,63 +184,63 @@ class RiscVSimulatorApp(tk.Tk):
         if frame:
             frame.clear_highlights()
 
-    def update_system_state_sim(self, sim_number: int, ciclo: int, tiempo: float, pc: int):
+    def update_system_state_sim(self, view_number: int, ciclo: int, tiempo: float, pc: int):
         """
-        Actualiza estado del sistema para la vista del simulador sim_number (1 o 2).
+        Actualiza estado del sistema para la vista view_number (1 o 2).
         """
-        if sim_number == 1 and self.active_views[0]:
+        if view_number == 1 and self.active_views[self.active_indices[0]]:
             self.view_status_1.update_system_state(ciclo, tiempo, pc)
-        elif sim_number == 2 and self.active_views[1]:
+        elif view_number == 2 and len(self.active_indices) > 1 and self.active_views[self.active_indices[1]]:
             self.view_status_2.update_system_state(ciclo, tiempo, pc)
         else:
-            print(f"Sim {sim_number} no está activo o no existe.")
+            print(f"Vista {view_number} no está activa o no existe.")
 
-    def update_metrics_sim(self, sim_number: int, ciclos, instrucciones, branches, branches_ok, precision):
+    def update_metrics_sim(self, view_number: int, ciclos, instrucciones, cpi, branches, branches_ok, precision):
         """
-        Actualiza métricas para la vista del simulador sim_number (1 o 2).
+        Actualiza métricas para la vista view_number (1 o 2).
         """
-        if sim_number == 1 and self.active_views[0]:
-            self.view_status_1.update_metrics(ciclos, instrucciones, branches, branches_ok, precision)
-        elif sim_number == 2 and self.active_views[1]:
-            self.view_status_2.update_metrics(ciclos, instrucciones, branches, branches_ok, precision)
+        if view_number == 1 and self.active_views[self.active_indices[0]]:
+            self.view_status_1.update_metrics(ciclos, instrucciones, cpi, branches, branches_ok, precision)
+        elif view_number == 2 and len(self.active_indices) > 1 and self.active_views[self.active_indices[1]]:
+            self.view_status_2.update_metrics(ciclos, instrucciones, cpi, branches, branches_ok, precision)
         else:
-            print(f"Sim {sim_number} no está activo o no existe.")
+            print(f"Vista {view_number} no está activa o no existe.")
 
-    def update_registers_sim(self, sim_number: int, reg_matrix):
+    def update_registers_sim(self, view_number: int, reg_matrix):
         """
-        Actualiza los registros para la vista del simulador sim_number (1 o 2).
+        Actualiza los registros para la vista view_number (1 o 2).
         reg_matrix debe ser iterable de pares (reg_num, valor).
         """
-        if sim_number == 1 and self.active_views[0]:
+        if view_number == 1 and self.active_views[self.active_indices[0]]:
             self.view_status_1.update_registers(reg_matrix)
-        elif sim_number == 2 and self.active_views[1]:
+        elif view_number == 2 and len(self.active_indices) > 1 and self.active_views[self.active_indices[1]]:
             self.view_status_2.update_registers(reg_matrix)
         else:
-            print(f"Sim {sim_number} no está activo o no existe.")
+            print(f"Vista {view_number} no está activa o no existe.")
 
-    def update_memory_sim(self, sim_number: int, mem_matrix):
+    def update_memory_sim(self, view_number: int, mem_matrix):
         """
-        Actualiza la memoria para la vista del simulador sim_number (1 o 2).
+        Actualiza la memoria para la vista view_number (1 o 2).
         mem_matrix debe ser iterable de pares (direccion, valor).
         """
-        if sim_number == 1 and self.active_views[0]:
+        if view_number == 1 and self.active_views[self.active_indices[0]]:
             self.view_status_1.update_memory(mem_matrix)
-        elif sim_number == 2 and self.active_views[1]:
+        elif view_number == 2 and len(self.active_indices) > 1 and self.active_views[self.active_indices[1]]:
             self.view_status_2.update_memory(mem_matrix)
         else:
-            print(f"Sim {sim_number} no está activo o no existe.")
+            print(f"Vista {view_number} no está activa o no existe.")
 
-    def update_pipeline_sim(self, sim_number: int, pipeline_info: dict, ciclo: int):
+    def update_pipeline_sim(self, view_number: int, pipeline_info: dict, ciclo: int):
         """
-        Actualiza la sección pipeline de la vista sim_number.
+        Actualiza la sección pipeline de la vista view_number.
         pipeline_info debe tener las claves: IF_ID, ID_EX, EX_MEM, MEM_WB con strings para mostrar.
         """
-        if sim_number == 1 and self.active_views[0]:
+        if view_number == 1 and self.active_views[self.active_indices[0]]:
             self.view_status_1.update_pipeline(pipeline_info, ciclo)
-        elif sim_number == 2 and self.active_views[1]:
+        elif view_number == 2 and len(self.active_indices) > 1 and self.active_views[self.active_indices[1]]:
             self.view_status_2.update_pipeline(pipeline_info, ciclo)
         else:
-            print(f"Sim {sim_number} no está activo o no existe.")
+            print(f"Vista {view_number} no está activa o no existe.")
 
     def update_history(self, sim_number: int,
                        ciclos, instrucciones, cpi,
