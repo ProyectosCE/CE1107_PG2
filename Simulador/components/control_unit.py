@@ -16,15 +16,15 @@ class ControlUnit:
             "ALUOp": "ADD"  # Por defecto
         }
 
-        if opcode == "add" or opcode == "sub" or opcode == "and" or opcode == "or" or opcode == "slt":
+        if opcode in {"add", "sub", "and", "or", "slt", "xor", "sll", "srl", "sra"}:
             signals["RegWrite"] = True
             signals["ALUSrc"] = False
             signals["ALUOp"] = opcode.upper()
 
-        elif opcode == "addi":
+        elif opcode in {"addi", "andi", "ori", "slti", "slli", "srli", "srai"}:
             signals["RegWrite"] = True
             signals["ALUSrc"] = True
-            signals["ALUOp"] = "ADD"
+            signals["ALUOp"] = opcode.upper()
 
         elif opcode == "lw":
             signals["RegWrite"] = True
@@ -38,13 +38,23 @@ class ControlUnit:
             signals["ALUSrc"] = True
             signals["ALUOp"] = "ADD"
 
-        elif opcode == "beq" or opcode == "bne":
+        elif opcode in {"beq", "bne", "blt", "bge", "bltu", "bgeu"}:
             signals["Branch"] = True
             signals["ALUOp"] = "SUB"
 
         elif opcode == "jal":
             signals["RegWrite"] = True
             signals["ALUOp"] = "ADD"  # Dirección de retorno en x[rd]
+
+        elif opcode == "jalr":
+            signals["RegWrite"] = True
+            signals["ALUSrc"] = True
+            signals["ALUOp"] = "ADD"
+
+        elif opcode in {"lui", "auipc"}:
+            signals["RegWrite"] = True
+            signals["ALUSrc"] = True
+            signals["ALUOp"] = "LUI" if opcode == "lui" else "AUIPC"
 
         elif opcode == "nop":
             pass  # todo en falso

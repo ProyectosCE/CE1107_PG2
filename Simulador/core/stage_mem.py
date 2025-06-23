@@ -1,8 +1,11 @@
 from components.memory import Memory
+import time
+from config import LATENCY_MEM
 
 class MemoryAccessStage:
-    def __init__(self, data_memory: Memory):
+    def __init__(self, data_memory: Memory, latency: float = None):
         self.data_mem = data_memory
+        self.latency = latency if latency is not None else LATENCY_MEM
 
     def access(self, ex_mem: dict) -> dict:
         instr = ex_mem["instr"]
@@ -21,6 +24,7 @@ class MemoryAccessStage:
         if control.get("MemWrite", False):
             self.data_mem.store_word(alu_result, rs2_val)
 
+        time.sleep(self.latency)
         return {
             "instr": instr,
             "rd": rd,

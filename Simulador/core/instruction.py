@@ -5,6 +5,7 @@ class InstructionType(Enum):
     S_TYPE = auto()
     B_TYPE = auto()
     J_TYPE = auto()
+    U_TYPE = auto()
     INVALID = auto()
 
 class Instruction:
@@ -35,17 +36,17 @@ class Instruction:
         self.opcode = parts[0]
         self.operands = parts[1:]
 
-        # Clasificación por opcode (simplificado)
-        if self.opcode in {"add", "sub", "and", "or", "slt"}:
+        # Clasificación por opcode (ampliada, solo lw/sw para memoria)
+        if self.opcode in {"add", "sub", "and", "or", "slt", "xor", "sll", "srl", "sra"}:
             self.type = InstructionType.R_TYPE
             self.rd, self.rs1, self.rs2 = self.operands
 
-        elif self.opcode in {"addi", "andi", "ori", "slli", "srli"}:
+        elif self.opcode in {"addi", "andi", "ori", "slti", "slli", "srli", "srai"}:
             self.type = InstructionType.I_TYPE
             self.rd, self.rs1, imm = self.operands
             self.imm = int(imm)
 
-        elif self.opcode in {"lw"}:
+        elif self.opcode == "lw":
             self.type = InstructionType.I_TYPE
             self.rd, mem = self.operands
             # formato lw rd, imm(rs1)
@@ -53,20 +54,33 @@ class Instruction:
             self.rs1 = rs1_part
             self.imm = int(imm_part)
 
-        elif self.opcode in {"sw"}:
+        elif self.opcode == "sw":
             self.type = InstructionType.S_TYPE
             self.rs2, mem = self.operands
             imm_part, rs1_part = mem.replace(')', '').split('(')
             self.rs1 = rs1_part
             self.imm = int(imm_part)
 
-        elif self.opcode in {"beq", "bne"}:
+        elif self.opcode in {"beq", "bne", "blt", "bge", "bltu", "bgeu"}:
             self.type = InstructionType.B_TYPE
             self.rs1, self.rs2, imm = self.operands
             self.imm = int(imm)
 
         elif self.opcode in {"jal"}:
             self.type = InstructionType.J_TYPE
+            self.rd, imm = self.operands
+            self.imm = int(imm)
+
+        elif self.opcode in {"jalr"}:
+            self.type = InstructionType.I_TYPE
+            self.rd, mem = self.operands
+            # formato jalr rd, imm(rs1)
+            imm_part, rs1_part = mem.replace(')', '').split('(')
+            self.rs1 = rs1_part
+            self.imm = int(imm_part)
+
+        elif self.opcode in {"lui", "auipc"}:
+            self.type = InstructionType.U_TYPE
             self.rd, imm = self.operands
             self.imm = int(imm)
 

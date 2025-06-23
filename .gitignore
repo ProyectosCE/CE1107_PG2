@@ -286,6 +286,9 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
+# Ignorar historial de ejecuciones
+Simulador/InOut/execution_history.json
+
 # End of https://www.toptal.com/developers/gitignore/api/python,pycharm
 # Aplica reglas recursivamente a Simulador y todas sus subcarpetas
 
