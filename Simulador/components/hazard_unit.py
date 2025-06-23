@@ -68,6 +68,12 @@ class HazardUnit:
             if instr_ex.rd == rs1 or instr_ex.rd == rs2:
                 stall = True
 
+        # ---------- 1b. RAW Hazard ALU→ALU o ALU→branch (requiere stall si no hay forwarding) ----------
+        # Detecta si la instrucción previa (ID/EX) escribe en un registro que la actual (IF/ID) lee
+        if instr_ex.opcode in {"add", "sub", "and", "or", "slt", "addi"} and instr_ex.rd and instr_ex.rd != "x0":
+            if instr_ex.rd == rs1 or instr_ex.rd == rs2:
+                stall = True
+
         # ---------- 2. Forwarding desde EX/MEM ----------
         if instr_mem and instr_mem.rd and instr_mem.rd != "x0":
             if instr_mem.rd == rs1:

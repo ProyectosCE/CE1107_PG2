@@ -13,8 +13,8 @@ import time
 class ProcessorBasic:
     """Procesador sin unidad de hazards ni predicción de saltos."""
     def __init__(self):
-        self.instr_mem = Memory(size_in_words=64)
-        self.data_mem  = Memory(size_in_words=64)
+        self.instr_mem = Memory(size_in_words=1024)
+        self.data_mem  = Memory(size_in_words=1024)
         self.pipeline  = Pipeline()
 
         self.if_stage  = InstructionFetch(self.instr_mem, latency=None)
@@ -48,8 +48,17 @@ class ProcessorBasic:
         """
         self.pipeline.init_pipeline()
 
+        last_ex_mem = None
+
         while not self.pipeline.is_done():
             self.metrics.tick()                      
+
+            # --- CONTROL DE SALTOS (básico, sin predicción) ---
+            if last_ex_mem and last_ex_mem["instr"].opcode in {"beq", "bne", "jal"}:
+                if last_ex_mem.get("branch_taken", False):
+                    target = last_ex_mem.get("target_address")
+                    if target is not None:
+                        self.if_stage.jump(target)
 
             fetched = self.if_stage.fetch()
             self.pipeline.step(fetched["instr"], fetched["pc"])
@@ -57,34 +66,14 @@ class ProcessorBasic:
             if_id  = self.pipeline.IF_ID
             id_ex  = self.id_stage.decode(if_id)
             ex_mem = self.ex_stage.execute(id_ex)
+            last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
+
             mem_wb = self.mem_stage.access(ex_mem)
             self.wb_stage.write_back(mem_wb)
 
             self.metrics.track_writeback(mem_wb["instr"])
 
-            print(f"\n[Ciclo {self.pipeline.get_cycle()}]")
-            print(f"IF_ID: {if_id['instr'].opcode} @ PC={if_id['pc']}")
-
-            if id_ex["instr"].opcode != "nop":
-                print(f"ID_EX: {id_ex['instr'].opcode}, rs1={id_ex['rs1']}={id_ex['rs1_val']}, "
-                      f"rs2={id_ex['rs2']}={id_ex['rs2_val']}, imm={id_ex['imm']}, rd={id_ex['rd']}")
-            else:
-                print("ID_EX: nop")
-
-            if ex_mem["instr"].opcode != "nop":
-                print(f"EX_MEM: {ex_mem['instr'].opcode}, ALU={ex_mem['alu_result']}, "
-                      f"branch_taken={ex_mem['branch_taken']}, target={ex_mem['target_address']}")
-            else:
-                print("EX_MEM: nop")
-
-            if mem_wb["instr"].opcode == "lw":
-                print(f"MEM_WB: lw → {mem_wb['rd']} = {mem_wb['mem_data']}")
-            elif mem_wb["instr"].opcode == "sw":
-                print(f"MEM_WB: sw → mem[{ex_mem['alu_result']}] = {ex_mem['rs2_val']}")
-            elif mem_wb["instr"].opcode != "nop":
-                print(f"MEM_WB: {mem_wb['instr'].opcode}, ALU result = {mem_wb['alu_result']}")
-            else:
-                print("MEM_WB: nop")
+            
 
             # --- Modo de ejecución ---
             if modo == "step":
