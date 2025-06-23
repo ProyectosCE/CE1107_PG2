@@ -5,65 +5,64 @@ from .Connection import *
 class SimView1(BaseSimView):
 
     def _draw_content(self):
-        # ──────── 1. INSTRUCTION FETCH ────────
 
         # ──────── 1. INSTRUCTION FETCH ────────
 
         self.mux_pc = HardwareBlock(self.canvas, 50, 130, 50, 50, "MUX PC",
-                                    fill="#E0F7FA", border_color="#00838F", tags="mux_pc")  # x = 50
+                                    fill="lightgray", border_color="#00838F", tags="mux_pc")  # x = 50
 
         self.reg_pc = HardwareBlock(self.canvas, 150, 110, 50, 90, "Reg PC",
-                                    fill="#F1F8E9", border_color="#33691E", tags="reg_pc")  # 50 + 50 + 50 = 150
+                                    fill="lightgray", border_color="#33691E", tags="reg_pc")  # 50 + 50 + 50 = 150
 
         self.instruction_mem = HardwareBlock(self.canvas, 250, 90, 120, 130, "Instr Mem",
-                                             fill="#FFF3E0", border_color="#EF6C00",
+                                             fill="lightgray", border_color="#EF6C00",
                                              tags="instruction_mem")  # 150 + 50 + 50 = 250
 
         self.adder = HardwareBlock(self.canvas, 250, 260, 60, 80, "Adder",
-                                   fill="#EDE7F6", border_color="#5E35B1", shape_type="trapezoid", tags="adder")
+                                   fill="lightgray", border_color="#5E35B1", shape_type="trapezoid", tags="adder")
 
         # ──────── 2. DECODE / REGISTER FETCH ────────
 
         self.reg1 = HardwareBlock(self.canvas, 420, 90, 30, 280, "Reg1",
-                                  fill="#F1F8E9", border_color="#33691E", tags="reg1")  # 250 + 120 + 50 = 420
+                                  fill="lightgray", border_color="#33691E", tags="reg1")  # 250 + 120 + 50 = 420
 
         self.register_file = HardwareBlock(self.canvas, 500, 60, 220, 280, "Reg File",
-                                           fill="#F1F8E9", border_color="#33691E",
+                                           fill="lightgray", border_color="#33691E",
                                            tags="register_file")  # 420 + 30 + 50 = 500
 
         self.extend = HardwareBlock(self.canvas, 500, 380, 220, 100, "Extend",
-                                    fill="#ECEFF1", border_color="#37474F", tags="extend")
+                                    fill="lightgray", border_color="#37474F", tags="extend")
 
         self.reg2 = HardwareBlock(self.canvas, 770, 60, 30, 330, "Reg2",
-                                  fill="#F1F8E9", border_color="#33691E", tags="reg2")  # 500 + 220 + 50 = 770
+                                  fill="lightgray", border_color="#33691E", tags="reg2")  # 500 + 220 + 50 = 770
 
         # ──────── 3. EXECUTE ────────
 
         self.mux_srcB = HardwareBlock(self.canvas, 850, 150, 50, 50, "MUX\nSrcB",
-                                      fill="#E0F7FA", border_color="#00838F", tags="mux_srcB")  # 770 + 30 + 50 = 850
+                                      fill="lightgray", border_color="#00838F", tags="mux_srcB")  # 770 + 30 + 50 = 850
 
         self.adderPC = HardwareBlock(self.canvas, 850, 270, 60, 80, "Adder PC",
-                                     fill="#EDE7F6", border_color="#5E35B1", shape_type="trapezoid", tags="adderPC")
+                                     fill="lightgray", border_color="#5E35B1", shape_type="trapezoid", tags="adderPC")
 
         self.alu = HardwareBlock(self.canvas, 950, 120, 100, 160, "ALU",
-                                 fill="#EDE7F6", border_color="#5E35B1", shape_type="trapezoid",
+                                 fill="lightgray", border_color="#5E35B1", shape_type="trapezoid",
                                  tags="alu")  # 850 + 50 + 50 = 950
 
         # ──────── 4. MEMORY ACCESS ────────
 
         self.reg3 = HardwareBlock(self.canvas, 1100, 60, 30, 330, "Reg3",
-                                  fill="#F1F8E9", border_color="#33691E", tags="reg3")  # 950 + 100 + 50 = 1100
+                                  fill="lightgray", border_color="#33691E", tags="reg3")  # 950 + 100 + 50 = 1100
 
         self.data_mem = HardwareBlock(self.canvas, 1180, 120, 120, 160, "Data Mem",
-                                      fill="#FFF3E0", border_color="#EF6C00", tags="data_mem")  # 1100 + 30 + 50 = 1180
+                                      fill="lightgray", border_color="#EF6C00", tags="data_mem")  # 1100 + 30 + 50 = 1180
 
         # ──────── 5. WRITE BACK ────────
 
         self.reg4 = HardwareBlock(self.canvas, 1350, 60, 30, 330, "Reg4",
-                                  fill="#F1F8E9", border_color="#33691E", tags="reg4")  # 1180 + 120 + 50 = 1350
+                                  fill="lightgray", border_color="#33691E", tags="reg4")  # 1180 + 120 + 50 = 1350
 
         self.mux_result = HardwareBlock(self.canvas, 1430, 170, 60, 60, "MUX\nResult",
-                                        fill="#E0F7FA", border_color="#00838F",
+                                        fill="lightgray", border_color="#00838F",
                                         tags="mux_result")  # 1350 + 30 + 50 = 1430
         #ports:
 
