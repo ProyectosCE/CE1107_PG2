@@ -102,6 +102,52 @@ class RiscVSimulatorApp(tk.Tk):
         if frame:
             frame.clear_highlights()
 
+    def update_system_state(self, sim_number: int, ciclo: int, tiempo: float, pc: int):
+        """
+        Actualiza estado del sistema para la vista del simulador sim_number (1 o 2).
+        """
+        if sim_number == 1 and self.active_views[0]:
+            self.view_status_1.update_system_state(ciclo, tiempo, pc)
+        elif sim_number == 2 and self.active_views[1]:
+            self.view_status_2.update_system_state(ciclo, tiempo, pc)
+        else:
+            print(f"Sim {sim_number} no está activo o no existe.")
+
+    def update_metrics(self, sim_number: int, ciclos, instrucciones, branches, branches_ok, precision):
+        """
+        Actualiza métricas para la vista del simulador sim_number (1 o 2).
+        """
+        if sim_number == 1 and self.active_views[0]:
+            self.view_status_1.update_metrics(ciclos, instrucciones, branches, branches_ok, precision)
+        elif sim_number == 2 and self.active_views[1]:
+            self.view_status_2.update_metrics(ciclos, instrucciones, branches, branches_ok, precision)
+        else:
+            print(f"Sim {sim_number} no está activo o no existe.")
+
+    def update_registers(self, sim_number: int, reg_matrix):
+        """
+        Actualiza los registros para la vista del simulador sim_number (1 o 2).
+        reg_matrix debe ser iterable de pares (reg_num, valor).
+        """
+        if sim_number == 1 and self.active_views[0]:
+            self.view_status_1.update_registers(reg_matrix)
+        elif sim_number == 2 and self.active_views[1]:
+            self.view_status_2.update_registers(reg_matrix)
+        else:
+            print(f"Sim {sim_number} no está activo o no existe.")
+
+    def update_memory(self, sim_number: int, mem_matrix):
+        """
+        Actualiza la memoria para la vista del simulador sim_number (1 o 2).
+        mem_matrix debe ser iterable de pares (direccion, valor).
+        """
+        if sim_number == 1 and self.active_views[0]:
+            self.view_status_1.update_memory(mem_matrix)
+        elif sim_number == 2 and self.active_views[1]:
+            self.view_status_2.update_memory(mem_matrix)
+        else:
+            print(f"Sim {sim_number} no está activo o no existe.")
+
     """
     ======================================================================
                              Menú de configuración
@@ -272,8 +318,12 @@ class RiscVSimulatorApp(tk.Tk):
 
         if len(vistas_activas) >= 1:
             self.view_status_1.set_view_name(f"Sim {vistas_activas[0] + 1}")
-            # Actualiza el estado inicial de la vista 1
-            self.view_status_1.update_status(0, 0.0, 0, [0] * 8, {i: 0 for i in range(8)})
+            # Actualiza estado inicial de vista 1
+            self.view_status_1.update_system_state(0, 0.0, 0)
+            self.view_status_1.update_registers([[i, 0] for i in range(32)])
+            self.view_status_1.update_memory([[i * 4, 0] for i in range(32)])
+            self.view_status_1.update_metrics(0, 0, 0, 0,0,0)
+
             if not self.view_status_1.winfo_ismapped():
                 self.view_status_1.pack(fill="both", expand=True)
         else:
@@ -282,8 +332,11 @@ class RiscVSimulatorApp(tk.Tk):
 
         if len(vistas_activas) == 2:
             self.view_status_2.set_view_name(f"Sim {vistas_activas[1] + 1}")
-            # Actualiza el estado inicial de la vista 2
-            self.view_status_2.update_status(0, 0.0, 0, [0] * 8, {i: 0 for i in range(8)})
+            # Actualiza estado inicial de vista 2
+            self.view_status_2.update_system_state(0, 0.0, 0)
+            self.view_status_2.update_registers([[i, 0] for i in range(32)])
+            self.view_status_2.update_memory([[i * 4, 0] for i in range(32)])
+            self.view_status_2.update_metrics(0, 0, 0, 0,0,0)
 
             if not self.view_status_2.winfo_ismapped():
                 self.view_status_2.pack(fill="both", expand=True)
