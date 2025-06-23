@@ -18,7 +18,26 @@ class ViewStatus(tk.Frame):
         self.pc_label = tk.Label(estado_frame, text="PC: 0x00000000")
         self.pc_label.pack(anchor="w", padx=5)
 
-        # ───── 1.5) Métricas de Simulación ─────
+        # ───── 1.5) Pipeline ─────
+        pipeline_frame = tk.LabelFrame(self, text="Pipeline (etapas)", font=("Arial", 10, "bold"))
+        pipeline_frame.pack(fill="x", padx=5, pady=5)
+
+        # Frame para contener Text + scrollbar horizontal
+        pipeline_container = tk.Frame(pipeline_frame)
+        pipeline_container.pack(fill="x", expand=True, padx=5, pady=5)
+
+        # Text widget con wrap="none" para permitir scroll horizontal
+        self.pipeline_text = tk.Text(pipeline_container, height=7, font=("Courier", 9), state="disabled", wrap="none")
+        self.pipeline_text.pack(side="top", fill="x", expand=True)
+
+        # Scrollbar horizontal
+        hscroll_pipeline = tk.Scrollbar(pipeline_container, orient="horizontal", command=self.pipeline_text.xview)
+        hscroll_pipeline.pack(side="bottom", fill="x")
+
+        # Configurar el text para usar la scrollbar horizontal
+        self.pipeline_text.configure(xscrollcommand=hscroll_pipeline.set)
+
+        # ───── 2) Métricas de Simulación ─────
         metrica_frame = tk.LabelFrame(self, text="Métricas de Simulación", font=("Arial", 10, "bold"))
         metrica_frame.pack(fill="x", padx=5, pady=(0, 5))
 
@@ -35,14 +54,14 @@ class ViewStatus(tk.Frame):
             lbl.pack(anchor="w", padx=5)
 
 
-        # ───── 2) Registros con scroll vertical ─────
+        # ───── 3) Registros con scroll vertical ─────
         reg_lblf = tk.LabelFrame(self, text="Registros", font=("Arial", 10, "bold"))
         reg_lblf.pack(fill="both", expand=False, padx=5, pady=5)
 
         reg_lblf.columnconfigure(0, weight=1)
         reg_lblf.rowconfigure(0, weight=1)
 
-        reg_canvas = tk.Canvas(reg_lblf, borderwidth=0, height=150)
+        reg_canvas = tk.Canvas(reg_lblf, borderwidth=0, height=300)
         vscroll_regs = tk.Scrollbar(reg_lblf, orient="vertical", command=reg_canvas.yview)
         reg_canvas.configure(yscrollcommand=vscroll_regs.set)
 
@@ -65,7 +84,7 @@ class ViewStatus(tk.Frame):
             lbl.pack(fill="x", padx=5, pady=1)
             self.reg_labels.append(lbl)
 
-        # ───── 3) Memoria con scroll vertical y horizontal ─────
+        # ───── 4) Memoria con scroll vertical y horizontal ─────
         mem_lblf = tk.LabelFrame(self, text="Memoria", font=("Arial", 10, "bold"))
         mem_lblf.pack(fill="both", expand=True, padx=5, pady=5)
 
@@ -146,6 +165,23 @@ class ViewStatus(tk.Frame):
         self.metric_labels["branches_totales"].config(text=f"Branches totales: {branches}")
         self.metric_labels["branches_acertados"].config(text=f"Branches acertados: {branches_ok}")
         self.metric_labels["precision"].config(text=f"Precisión del predictor: {precision:.2f}%")
+
+    def update_pipeline(self, pipeline_info: dict, ciclo: int):
+        """
+        pipeline_info: dict con claves IF_ID, ID_EX, EX_MEM, MEM_WB, cada uno string con info.
+        ciclo: número de ciclo actual.
+        """
+        texto = [f"[Ciclo {ciclo}]"]
+        etapas = ["IF_ID", "ID_EX", "EX_MEM", "MEM_WB"]
+        for etapa in etapas:
+            info = pipeline_info.get(etapa, "nop")
+            texto.append(f"{etapa}: {info}")
+
+        full_text = "\n".join(texto)
+        self.pipeline_text.configure(state="normal")
+        self.pipeline_text.delete(1.0, tk.END)
+        self.pipeline_text.insert(tk.END, full_text)
+        self.pipeline_text.configure(state="disabled")
 
     def set_view_name(self, name):
         self.view_name = name

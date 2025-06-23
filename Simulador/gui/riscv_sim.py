@@ -102,7 +102,7 @@ class RiscVSimulatorApp(tk.Tk):
         if frame:
             frame.clear_highlights()
 
-    def update_system_state(self, sim_number: int, ciclo: int, tiempo: float, pc: int):
+    def update_system_state_sim(self, sim_number: int, ciclo: int, tiempo: float, pc: int):
         """
         Actualiza estado del sistema para la vista del simulador sim_number (1 o 2).
         """
@@ -113,7 +113,7 @@ class RiscVSimulatorApp(tk.Tk):
         else:
             print(f"Sim {sim_number} no está activo o no existe.")
 
-    def update_metrics(self, sim_number: int, ciclos, instrucciones, branches, branches_ok, precision):
+    def update_metrics_sim(self, sim_number: int, ciclos, instrucciones, branches, branches_ok, precision):
         """
         Actualiza métricas para la vista del simulador sim_number (1 o 2).
         """
@@ -124,7 +124,7 @@ class RiscVSimulatorApp(tk.Tk):
         else:
             print(f"Sim {sim_number} no está activo o no existe.")
 
-    def update_registers(self, sim_number: int, reg_matrix):
+    def update_registers_sim(self, sim_number: int, reg_matrix):
         """
         Actualiza los registros para la vista del simulador sim_number (1 o 2).
         reg_matrix debe ser iterable de pares (reg_num, valor).
@@ -136,7 +136,7 @@ class RiscVSimulatorApp(tk.Tk):
         else:
             print(f"Sim {sim_number} no está activo o no existe.")
 
-    def update_memory(self, sim_number: int, mem_matrix):
+    def update_memory_sim(self, sim_number: int, mem_matrix):
         """
         Actualiza la memoria para la vista del simulador sim_number (1 o 2).
         mem_matrix debe ser iterable de pares (direccion, valor).
@@ -145,6 +145,18 @@ class RiscVSimulatorApp(tk.Tk):
             self.view_status_1.update_memory(mem_matrix)
         elif sim_number == 2 and self.active_views[1]:
             self.view_status_2.update_memory(mem_matrix)
+        else:
+            print(f"Sim {sim_number} no está activo o no existe.")
+
+    def update_pipeline_sim(self, sim_number: int, pipeline_info: dict, ciclo: int):
+        """
+        Actualiza la sección pipeline de la vista sim_number.
+        pipeline_info debe tener las claves: IF_ID, ID_EX, EX_MEM, MEM_WB con strings para mostrar.
+        """
+        if sim_number == 1 and self.active_views[0]:
+            self.view_status_1.update_pipeline(pipeline_info, ciclo)
+        elif sim_number == 2 and self.active_views[1]:
+            self.view_status_2.update_pipeline(pipeline_info, ciclo)
         else:
             print(f"Sim {sim_number} no está activo o no existe.")
 
@@ -301,6 +313,14 @@ class RiscVSimulatorApp(tk.Tk):
         self.notebook.pack(expand=True, fill="both", padx=5, pady=5)
 
     def _refresh_sim_views(self):
+
+        estado_pipeline_inicial = {
+            "IF_ID": "nop",
+            "ID_EX": "nop",
+            "EX_MEM": "nop",
+            "MEM_WB": "nop"
+        }
+
         # Limpia las pestañas
         for idx in list(self._tabs.keys()):
             frame = self._tabs.pop(idx)
@@ -323,7 +343,7 @@ class RiscVSimulatorApp(tk.Tk):
             self.view_status_1.update_registers([[i, 0] for i in range(32)])
             self.view_status_1.update_memory([[i * 4, 0] for i in range(32)])
             self.view_status_1.update_metrics(0, 0, 0, 0,0,0)
-
+            self.view_status_1.update_pipeline(estado_pipeline_inicial, ciclo=0)
             if not self.view_status_1.winfo_ismapped():
                 self.view_status_1.pack(fill="both", expand=True)
         else:
@@ -337,7 +357,7 @@ class RiscVSimulatorApp(tk.Tk):
             self.view_status_2.update_registers([[i, 0] for i in range(32)])
             self.view_status_2.update_memory([[i * 4, 0] for i in range(32)])
             self.view_status_2.update_metrics(0, 0, 0, 0,0,0)
-
+            self.view_status_2.update_pipeline(estado_pipeline_inicial, ciclo=0)
             if not self.view_status_2.winfo_ismapped():
                 self.view_status_2.pack(fill="both", expand=True)
         else:
