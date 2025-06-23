@@ -110,7 +110,6 @@ class RiscVSimulatorApp(tk.Tk):
             print(f"Error al parsear el código: {e}")
             return
 
-        # Si el código cambió o no está inicializado, reiniciar el manager y CPUs
         if not self._step_initialized or self._step_program_lines != program_lines or self._step_manager is None:
             try:
                 self._step_manager = SimulatorManager(program_lines, active_indices=self.active_indices)
@@ -122,12 +121,10 @@ class RiscVSimulatorApp(tk.Tk):
                 print(f"Error al inicializar el simulador: {e}")
                 return
 
-        # Avanzar un ciclo en cada CPU
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = self._step_manager.cpu_names[sim_idx]
             cpu = self._step_manager.cpus[view_idx]
             try:
-                # Ejecutar solo un ciclo (nuevo método run_one_cycle)
                 finished = cpu.run_one_cycle()
                 metrics = cpu.metrics
 
@@ -137,6 +134,27 @@ class RiscVSimulatorApp(tk.Tk):
                 branch_total = metrics.branches_totales
                 branch_acertados = metrics.branches_acertados
 
+                # Obtener tiempo real de ejecución
+                if hasattr(metrics, "get_elapsed_time"):
+                    tiempo = metrics.get_elapsed_time()
+                elif hasattr(metrics, "elapsed_time"):
+                    tiempo = metrics.elapsed_time
+                else:
+                    tiempo = 0.0
+
+                # Obtener PC actual del pipeline (preferentemente IF_ID)
+                pc = 0
+                if hasattr(cpu, "pipeline") and hasattr(cpu.pipeline, "IF_ID"):
+                    if hasattr(cpu.pipeline.IF_ID, "pc"):
+                        pc = cpu.pipeline.IF_ID.pc
+                    elif isinstance(cpu.pipeline.IF_ID, dict) and "pc" in cpu.pipeline.IF_ID:
+                        pc = cpu.pipeline.IF_ID["pc"]
+                elif hasattr(cpu, "pc"):
+                    pc = cpu.pc
+
+                # Si el procesador no tiene atributo pc, intenta obtenerlo del pipeline IF_ID
+                if not pc and hasattr(cpu, "pipeline") and hasattr(cpu.pipeline, "IF_ID"):
+                    pc = getattr(cpu.pipeline.IF_ID, "pc", 0)
                 print(f"\n--- Métricas para {cpu_name} ---")
                 print(f"Ciclos totales: {ciclos}")
                 print(f"Instrucciones retiradas: {inst}")
@@ -150,6 +168,7 @@ class RiscVSimulatorApp(tk.Tk):
                 print(f"Precisión del predictor: {precision:.2f}%")
 
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
+                self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
 
                 # Si terminó, reiniciar para el próximo step
                 if finished:
@@ -191,17 +210,33 @@ class RiscVSimulatorApp(tk.Tk):
 
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = manager.cpu_names[sim_idx]
+            cpu = manager.cpus[view_idx]
             try:
-                manager.cpus[view_idx].load_program(program_lines)
-                # Ejecutar en modo delay, usando el delay en segundos
-                manager.cpus[view_idx].run(modo="delay", delay_seg=ms/1000.0)
-                metrics = manager.cpus[view_idx].metrics
+                cpu.load_program(program_lines)
+                cpu.run(modo="delay", delay_seg=ms/1000.0)
+                metrics = cpu.metrics
 
                 ciclos = metrics.ciclos_totales
                 inst = metrics.instrucciones_retiradas
                 cpi = metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0
                 branch_total = metrics.branches_totales
                 branch_acertados = metrics.branches_acertados
+
+                if hasattr(metrics, "get_elapsed_time"):
+                    tiempo = metrics.get_elapsed_time()
+                elif hasattr(metrics, "elapsed_time"):
+                    tiempo = metrics.elapsed_time
+                else:
+                    tiempo = 0.0
+
+                pc = 0
+                if hasattr(cpu, "pipeline") and hasattr(cpu.pipeline, "IF_ID"):
+                    if hasattr(cpu.pipeline.IF_ID, "pc"):
+                        pc = cpu.pipeline.IF_ID.pc
+                    elif isinstance(cpu.pipeline.IF_ID, dict) and "pc" in cpu.pipeline.IF_ID:
+                        pc = cpu.pipeline.IF_ID["pc"]
+                elif hasattr(cpu, "pc"):
+                    pc = cpu.pc
 
                 print(f"\n--- Métricas para {cpu_name} ---")
                 print(f"Ciclos totales: {ciclos}")
@@ -216,6 +251,7 @@ class RiscVSimulatorApp(tk.Tk):
                 print(f"Precisión del predictor: {precision:.2f}%")
 
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
+                self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
 
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
@@ -249,17 +285,33 @@ class RiscVSimulatorApp(tk.Tk):
 
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = manager.cpu_names[sim_idx]
+            cpu = manager.cpus[view_idx]
             try:
-                manager.cpus[view_idx].load_program(program_lines)
-                # Ejecutar en modo full (sin delay)
-                manager.cpus[view_idx].run(modo="full", delay_seg=0)
-                metrics = manager.cpus[view_idx].metrics
+                cpu.load_program(program_lines)
+                cpu.run(modo="full", delay_seg=0)
+                metrics = cpu.metrics
 
                 ciclos = metrics.ciclos_totales
                 inst = metrics.instrucciones_retiradas
                 cpi = metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0
                 branch_total = metrics.branches_totales
                 branch_acertados = metrics.branches_acertados
+
+                if hasattr(metrics, "get_elapsed_time"):
+                    tiempo = metrics.get_elapsed_time()
+                elif hasattr(metrics, "elapsed_time"):
+                    tiempo = metrics.elapsed_time
+                else:
+                    tiempo = 0.0
+
+                pc = 0
+                if hasattr(cpu, "pipeline") and hasattr(cpu.pipeline, "IF_ID"):
+                    if hasattr(cpu.pipeline.IF_ID, "pc"):
+                        pc = cpu.pipeline.IF_ID.pc
+                    elif isinstance(cpu.pipeline.IF_ID, dict) and "pc" in cpu.pipeline.IF_ID:
+                        pc = cpu.pipeline.IF_ID["pc"]
+                elif hasattr(cpu, "pc"):
+                    pc = cpu.pc
 
                 print(f"\n--- Métricas para {cpu_name} ---")
                 print(f"Ciclos totales: {ciclos}")
@@ -274,6 +326,7 @@ class RiscVSimulatorApp(tk.Tk):
                 print(f"Precisión del predictor: {precision:.2f}%")
 
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
+                self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
 
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
@@ -309,10 +362,12 @@ class RiscVSimulatorApp(tk.Tk):
         """
         Actualiza estado del sistema para la vista view_number (1 o 2).
         """
+        # Forzar conversión a float y formatear a 4 decimales para asegurar visualización
+        tiempo_str = f"{float(tiempo):.4f}"
         if view_number == 1 and self.active_views[self.active_indices[0]]:
-            self.view_status_1.update_system_state(ciclo, tiempo, pc)
+            self.view_status_1.update_system_state(ciclo, float(tiempo_str), pc)
         elif view_number == 2 and len(self.active_indices) > 1 and self.active_views[self.active_indices[1]]:
-            self.view_status_2.update_system_state(ciclo, tiempo, pc)
+            self.view_status_2.update_system_state(ciclo, float(tiempo_str), pc)
         else:
             print(f"Vista {view_number} no está activa o no existe.")
 

@@ -129,6 +129,7 @@ class Processor:
         """Avanza un ciclo del pipeline. Retorna True si terminó, False si no."""
         if not hasattr(self, "_step_pipeline_initialized") or not self._step_pipeline_initialized:
             self.metrics.start_timer()
+            self._step_start_time = time.perf_counter()
             self.pipeline.init_pipeline()
             self._step_pipeline_initialized = True
             self.last_id_ex = None
@@ -186,6 +187,10 @@ class Processor:
         self.wb_stage.write_back(mem_wb)
 
         self.metrics.track_writeback(mem_wb["instr"])
+
+        # Actualiza el tiempo de ejecución en cada ciclo
+        if hasattr(self, "_step_start_time"):
+            self.metrics.elapsed_time = time.perf_counter() - self._step_start_time
 
         if self.pipeline.is_done():
             self.metrics.stop_timer()

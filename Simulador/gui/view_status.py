@@ -111,7 +111,8 @@ class ViewStatus(tk.Frame):
     def update_system_state(self, ciclo: int, tiempo: float, pc: int):
         """Actualiza ciclo, tiempo y PC."""
         self.ciclo_label.config(text=f"Ciclo: {ciclo}")
-        self.tiempo_label.config(text=f"Tiempo: {tiempo:.2f} s")
+        # Mostrar el tiempo con 6 decimales para mayor precisión visual
+        self.tiempo_label.config(text=f"Tiempo: {tiempo:.6f} s")
         self.pc_label.config(text=f"PC: {pc:#010x}")
 
     def update_registers(self, reg_dict):
