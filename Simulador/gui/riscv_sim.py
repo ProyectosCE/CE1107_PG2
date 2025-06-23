@@ -88,29 +88,22 @@ class RiscVSimulatorApp(tk.Tk):
         print("Step forward un ciclo")
 
     def _start_timed_exec(self):
-        # Aquí iría la lógica de ejecución paso a paso/ritmo, pero ahora solo un placeholder.
-        print("Ejecución rítmica (no implementada, use Run-All para ejecución completa)")
-
-    def _run_full_exec(self):
+        ms = int(self.interval_spin.get())
+        print(f"Ejecución rítmica: un ciclo cada {ms} ms")
         code = self.code_space.get("1.0", tk.END)
         # Obtener solo líneas de código ensamblador limpias (sin comentarios, sin etiquetas)
         raw_lines = [line for line in code.splitlines() if line.strip()]
         parser = Parser()
         try:
             instructions = parser.parse(raw_lines)
-            # Usar el atributo .text (o .raw_line) de cada instrucción si existe, o reconstruir la línea limpia
-            # Preferimos usar el texto original limpio, sin PC ni formato extra
             program_lines = []
             for instr in instructions:
-                # Si el objeto Instruction tiene un atributo con la línea original, úsalo
                 if hasattr(instr, "raw_line"):
                     program_lines.append(instr.raw_line)
                 elif hasattr(instr, "text"):
                     program_lines.append(instr.text)
                 else:
-                    # Como fallback, usar el opcode y los operandos
                     program_lines.append(instr.opcode + " " + " ".join(str(x) for x in instr.operands))
-            # Validar que todas las instrucciones sean válidas
             if not program_lines or any(not instr.is_valid() for instr in instructions):
                 print("Error: El parser generó instrucciones inválidas o vacías.")
                 return
@@ -124,11 +117,69 @@ class RiscVSimulatorApp(tk.Tk):
             print(f"Error al inicializar el simulador: {e}")
             return
 
-        # Mapear correctamente cada simulador activo a su vista (view_status_1 o view_status_2)
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = manager.cpu_names[sim_idx]
             try:
                 manager.cpus[view_idx].load_program(program_lines)
+                # Ejecutar en modo delay, usando el delay en segundos
+                manager.cpus[view_idx].run(modo="delay", delay_seg=ms/1000.0)
+                metrics = manager.cpus[view_idx].metrics
+
+                ciclos = metrics.ciclos_totales
+                inst = metrics.instrucciones_retiradas
+                cpi = metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0
+                branch_total = metrics.branches_totales
+                branch_acertados = metrics.branches_acertados
+
+                print(f"\n--- Métricas para {cpu_name} ---")
+                print(f"Ciclos totales: {ciclos}")
+                print(f"Instrucciones retiradas: {inst}")
+                print(f"CPI: {cpi:.2f}")
+                print(f"Branches totales: {branch_total}")
+                print(f"Branches acertados: {branch_acertados}")
+                if metrics.branches_totales:
+                    precision = (metrics.branches_acertados / metrics.branches_totales) * 100
+                else:
+                    precision = 0.0
+                print(f"Precisión del predictor: {precision:.2f}%")
+
+                self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
+
+            except Exception as e:
+                print(f"Error al ejecutar {cpu_name}: {e}")
+
+    def _run_full_exec(self):
+        code = self.code_space.get("1.0", tk.END)
+        raw_lines = [line for line in code.splitlines() if line.strip()]
+        parser = Parser()
+        try:
+            instructions = parser.parse(raw_lines)
+            program_lines = []
+            for instr in instructions:
+                if hasattr(instr, "raw_line"):
+                    program_lines.append(instr.raw_line)
+                elif hasattr(instr, "text"):
+                    program_lines.append(instr.text)
+                else:
+                    program_lines.append(instr.opcode + " " + " ".join(str(x) for x in instr.operands))
+            if not program_lines or any(not instr.is_valid() for instr in instructions):
+                print("Error: El parser generó instrucciones inválidas o vacías.")
+                return
+        except Exception as e:
+            print(f"Error al parsear el código: {e}")
+            return
+
+        try:
+            manager = SimulatorManager(program_lines, active_indices=self.active_indices)
+        except Exception as e:
+            print(f"Error al inicializar el simulador: {e}")
+            return
+
+        for view_idx, sim_idx in enumerate(self.active_indices):
+            cpu_name = manager.cpu_names[sim_idx]
+            try:
+                manager.cpus[view_idx].load_program(program_lines)
+                # Ejecutar en modo full (sin delay)
                 manager.cpus[view_idx].run(modo="full", delay_seg=0)
                 metrics = manager.cpus[view_idx].metrics
 
@@ -150,8 +201,6 @@ class RiscVSimulatorApp(tk.Tk):
                     precision = 0.0
                 print(f"Precisión del predictor: {precision:.2f}%")
 
-                # sim_idx es el índice real de la simulación (0..3), pero las vistas son 0 o 1
-                # Usar view_idx+1 como número de vista (1 o 2)
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
 
             except Exception as e:
