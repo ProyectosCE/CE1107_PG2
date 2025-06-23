@@ -87,3 +87,41 @@ class ProcessorBasic:
 
     def get_metrics(self):
         return self.metrics
+
+    def run_one_cycle(self):
+        """Avanza un ciclo del pipeline. Retorna True si terminó, False si no."""
+        if not hasattr(self, "_step_pipeline_initialized") or not self._step_pipeline_initialized:
+            self.metrics.start_timer()
+            self.pipeline.init_pipeline()
+            self._step_pipeline_initialized = True
+            self._last_ex_mem = None
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+
+        self.metrics.tick()
+
+        # --- CONTROL DE SALTOS (básico, sin predicción) ---
+        if hasattr(self, "_last_ex_mem") and self._last_ex_mem and self._last_ex_mem["instr"].opcode in {"beq", "bne", "jal"}:
+            if self._last_ex_mem.get("branch_taken", False):
+                target = self._last_ex_mem.get("target_address")
+                if target is not None:
+                    self.if_stage.jump(target)
+
+        fetched = self.if_stage.fetch()
+        self.pipeline.step(fetched["instr"], fetched["pc"])
+
+        if_id  = self.pipeline.IF_ID
+        id_ex  = self.id_stage.decode(if_id)
+        ex_mem = self.ex_stage.execute(id_ex)
+        self._last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
+
+        mem_wb = self.mem_stage.access(ex_mem)
+        self.wb_stage.write_back(mem_wb)
+        self.metrics.track_writeback(mem_wb["instr"])
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+        return False

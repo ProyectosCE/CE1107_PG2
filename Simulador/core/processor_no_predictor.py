@@ -129,3 +129,53 @@ class ProcessorNoPredictor:
 
     def get_metrics(self):
         return self.metrics
+
+    def run_one_cycle(self):
+        """Avanza un ciclo del pipeline. Retorna True si terminó, False si no."""
+        if not hasattr(self, "_step_pipeline_initialized") or not self._step_pipeline_initialized:
+            self.metrics.start_timer()
+            self.pipeline.init_pipeline()
+            self._step_pipeline_initialized = True
+            self._last_ex_mem = None
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+
+        self.metrics.tick()
+
+        hazard = self.hazard_unit.detect_hazard(
+            self.pipeline.IF_ID,
+            self.pipeline.ID_EX,
+            self.pipeline.EX_MEM,
+            self.pipeline.MEM_WB,
+        )
+        # --- CONTROL DE SALTOS Y FLUSH ---
+        if hasattr(self, "_last_ex_mem") and self._last_ex_mem and self._last_ex_mem.get("flush_required", False):
+            target = self._last_ex_mem.get("target_address")
+            if target is not None:
+                self.if_stage.jump(target)
+            self.pipeline.flush()
+        # --- AVANCE NORMAL DEL PIPELINE ---
+        if hazard["stall"]:
+            # print("STALL por riesgo tipo load-use")
+            self.pipeline.insert_stall()
+        else:
+            fetched = self.if_stage.fetch()
+            self.pipeline.step(fetched["instr"], fetched["pc"])
+
+        if_id  = self.pipeline.IF_ID
+        id_ex  = self.id_stage.decode(if_id)
+        ex_mem = self.ex_stage.execute(id_ex)
+        self._last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
+
+        # (flush ya se maneja arriba)
+
+        mem_wb = self.mem_stage.access(ex_mem)
+        self.wb_stage.write_back(mem_wb)
+        self.metrics.track_writeback(mem_wb["instr"])
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+        return False

@@ -125,3 +125,70 @@ class Processor:
 
         self.metrics.report()
 
+    def run_one_cycle(self):
+        """Avanza un ciclo del pipeline. Retorna True si terminó, False si no."""
+        if not hasattr(self, "_step_pipeline_initialized") or not self._step_pipeline_initialized:
+            self.metrics.start_timer()
+            self.pipeline.init_pipeline()
+            self._step_pipeline_initialized = True
+            self.last_id_ex = None
+            self.last_ex_mem = None
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+
+        self.metrics.tick()
+
+        hazard_info = self.hazard_unit.detect_hazard(
+            self.pipeline.IF_ID,
+            self.pipeline.ID_EX,
+            self.pipeline.EX_MEM,
+            self.pipeline.MEM_WB
+        )
+
+        # --- CONTROL DE SALTOS Y FLUSH ---
+        ex_mem = getattr(self, "last_ex_mem", None)
+        if ex_mem and ex_mem.get("flush_required", False):
+            target = ex_mem.get("target_address")
+            if target is not None:
+                self.if_stage.jump(target)
+            self.pipeline.flush()
+        else:
+            id_ex_prev = getattr(self, "last_id_ex", None)
+            if id_ex_prev and id_ex_prev["instr"].opcode in {"beq", "bne", "jal"}:
+                if id_ex_prev.get("predicted_taken", False):
+                    predicted_target = id_ex_prev.get("predicted_target")
+                    if predicted_target is not None:
+                        self.if_stage.jump(predicted_target)
+
+        if hazard_info["stall"]:
+            # print("Hazard detectado → STALL aplicado (load-use)")
+            self.pipeline.insert_stall()
+        else:
+            fetched = self.if_stage.fetch()
+            instr = fetched["instr"]
+            pc = fetched["pc"]
+            self.pipeline.step(instr, pc)
+
+        if_id = self.pipeline.IF_ID
+        id_ex = self.id_stage.decode(if_id)
+        ex_mem = self.ex_stage.execute(id_ex)
+        self.last_id_ex = id_ex  # Guardar para el siguiente ciclo
+        self.last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
+
+        if ex_mem["instr"].opcode in {"beq", "bne", "jal"}:
+            predicted = id_ex.get("predicted_taken", False)
+            actual = ex_mem.get("branch_taken", False)
+            self.metrics.track_branch(predicted, actual)
+
+        mem_wb = self.mem_stage.access(ex_mem)
+        self.wb_stage.write_back(mem_wb)
+
+        self.metrics.track_writeback(mem_wb["instr"])
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+        return False
+

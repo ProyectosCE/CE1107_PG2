@@ -70,6 +70,11 @@ class RiscVSimulatorApp(tk.Tk):
         self._history = {1: deque(maxlen=10), 2: deque(maxlen=10)}  # últimas 10 por sim
         self._history_win = None
 
+        # Inicialización de atributos para el paso a paso
+        self._step_manager = None
+        self._step_initialized = False
+        self._step_program_lines = None
+
     # PRUEBA DE HISTORIAL - Borrar despues
         #self.update_history(1, 1, 0, 0, 0, 0, 0)
         #self.update_history(2, 0, 0, 0, 0, 0, 0)
@@ -85,7 +90,74 @@ class RiscVSimulatorApp(tk.Tk):
         print("Step backward un ciclo")
 
     def _step_forward(self):
-        print("Step forward un ciclo")
+        code = self.code_space.get("1.0", tk.END)
+        raw_lines = [line for line in code.splitlines() if line.strip()]
+        parser = Parser()
+        try:
+            instructions = parser.parse(raw_lines)
+            program_lines = []
+            for instr in instructions:
+                if hasattr(instr, "raw_line"):
+                    program_lines.append(instr.raw_line)
+                elif hasattr(instr, "text"):
+                    program_lines.append(instr.text)
+                else:
+                    program_lines.append(instr.opcode + " " + " ".join(str(x) for x in instr.operands))
+            if not program_lines or any(not instr.is_valid() for instr in instructions):
+                print("Error: El parser generó instrucciones inválidas o vacías.")
+                return
+        except Exception as e:
+            print(f"Error al parsear el código: {e}")
+            return
+
+        # Si el código cambió o no está inicializado, reiniciar el manager y CPUs
+        if not self._step_initialized or self._step_program_lines != program_lines or self._step_manager is None:
+            try:
+                self._step_manager = SimulatorManager(program_lines, active_indices=self.active_indices)
+                for cpu in self._step_manager.cpus:
+                    cpu.load_program(program_lines)
+                self._step_program_lines = program_lines
+                self._step_initialized = True
+            except Exception as e:
+                print(f"Error al inicializar el simulador: {e}")
+                return
+
+        # Avanzar un ciclo en cada CPU
+        for view_idx, sim_idx in enumerate(self.active_indices):
+            cpu_name = self._step_manager.cpu_names[sim_idx]
+            cpu = self._step_manager.cpus[view_idx]
+            try:
+                # Ejecutar solo un ciclo (nuevo método run_one_cycle)
+                finished = cpu.run_one_cycle()
+                metrics = cpu.metrics
+
+                ciclos = metrics.ciclos_totales
+                inst = metrics.instrucciones_retiradas
+                cpi = metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0
+                branch_total = metrics.branches_totales
+                branch_acertados = metrics.branches_acertados
+
+                print(f"\n--- Métricas para {cpu_name} ---")
+                print(f"Ciclos totales: {ciclos}")
+                print(f"Instrucciones retiradas: {inst}")
+                print(f"CPI: {cpi:.2f}")
+                print(f"Branches totales: {branch_total}")
+                print(f"Branches acertados: {branch_acertados}")
+                if metrics.branches_totales:
+                    precision = (metrics.branches_acertados / metrics.branches_totales) * 100
+                else:
+                    precision = 0.0
+                print(f"Precisión del predictor: {precision:.2f}%")
+
+                self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
+
+                # Si terminó, reiniciar para el próximo step
+                if finished:
+                    print(f"{cpu_name} ha finalizado la ejecución.")
+                    self._step_initialized = False
+
+            except Exception as e:
+                print(f"Error al ejecutar {cpu_name}: {e}")
 
     def _start_timed_exec(self):
         ms = int(self.interval_spin.get())
