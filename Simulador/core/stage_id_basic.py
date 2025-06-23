@@ -27,8 +27,8 @@ class InstructionDecodeBasic:
         if instr.opcode == "nop":
             return {"instr": instr, "pc": pc}
 
-        rs1_val = self.reg_file.read(instr.rs1) if instr.rs1 else None
-        rs2_val = self.reg_file.read(instr.rs2) if instr.rs2 else None
+        rs1_val = self.reg_file.read(instr.rs1) if instr.rs1 else 0
+        rs2_val = self.reg_file.read(instr.rs2) if instr.rs2 else 0
 
         time.sleep(self.latency)
         return {

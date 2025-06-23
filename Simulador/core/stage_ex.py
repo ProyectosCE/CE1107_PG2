@@ -37,23 +37,65 @@ class ExecuteStage:
             alu_result = rs1_val & operand2
         elif alu_op == "OR":
             alu_result = rs1_val | operand2
+        elif alu_op == "XOR":
+            alu_result = rs1_val ^ operand2
         elif alu_op == "SLT":
             alu_result = int(rs1_val < operand2)
+        elif alu_op == "SLL":
+            alu_result = rs1_val << (operand2 & 0x1F)
+        elif alu_op == "SRL":
+            alu_result = (rs1_val % (1 << 32)) >> (operand2 & 0x1F)
+        elif alu_op == "SRA":
+            alu_result = rs1_val >> (operand2 & 0x1F)
+        elif alu_op == "ADDI":
+            alu_result = rs1_val + imm
+        elif alu_op == "ANDI":
+            alu_result = rs1_val & imm
+        elif alu_op == "ORI":
+            alu_result = rs1_val | imm
+        elif alu_op == "SLTI":
+            alu_result = int(rs1_val < imm)
+        elif alu_op == "SLLI":
+            alu_result = rs1_val << (imm & 0x1F)
+        elif alu_op == "SRLI":
+            alu_result = (rs1_val % (1 << 32)) >> (imm & 0x1F)
+        elif alu_op == "SRAI":
+            alu_result = rs1_val >> (imm & 0x1F)
+        elif alu_op == "LUI":
+            alu_result = imm << 12
+        elif alu_op == "AUIPC":
+            alu_result = pc + (imm << 12)
         elif alu_op == "NOP":
             pass
         else:
             raise ValueError(f"ALUOp no soportado: {alu_op}")
 
-        # Lógica de branch
+        # Lógica de branch extendida
         if opcode == "beq":
             branch_taken = rs1_val == rs2_val
             target_address = pc + imm
         elif opcode == "bne":
             branch_taken = rs1_val != rs2_val
             target_address = pc + imm
+        elif opcode == "blt":
+            branch_taken = rs1_val < rs2_val
+            target_address = pc + imm
+        elif opcode == "bge":
+            branch_taken = rs1_val >= rs2_val
+            target_address = pc + imm
+        elif opcode == "bltu":
+            branch_taken = (rs1_val & 0xFFFFFFFF) < (rs2_val & 0xFFFFFFFF)
+            target_address = pc + imm
+        elif opcode == "bgeu":
+            branch_taken = (rs1_val & 0xFFFFFFFF) >= (rs2_val & 0xFFFFFFFF)
+            target_address = pc + imm
         elif opcode == "jal":
             alu_result = pc + 4
             target_address = pc + imm
+            branch_taken = True
+        elif opcode == "jalr":
+            alu_result = pc + 4
+            target_address = (rs1_val + imm) & ~1
             branch_taken = True
 
         # Verificación de predicción de salto
