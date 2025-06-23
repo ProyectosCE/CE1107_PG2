@@ -123,5 +123,5 @@ class Processor:
         return self.metrics
         self.metrics.display()
 
-    def get_metrics(self):
-        return self.metrics
+        self.metrics.report()
+
