@@ -6,6 +6,7 @@ from .view_status import ViewStatus
 from collections import deque
 
 from InOut.parser import Parser
+from core.simulator_manager import SimulatorManager
 
 
 class RiscVSimulatorApp(tk.Tk):
@@ -24,6 +25,7 @@ class RiscVSimulatorApp(tk.Tk):
         self.minsize(width=1500, height=600)
 
         self.active_views = [True, True, False, False]
+        self.active_indices = [0, 1]  # Por defecto, los dos primeros
         self._tabs = {}
 
         self._sim_names = [
@@ -88,8 +90,57 @@ class RiscVSimulatorApp(tk.Tk):
     def _start_timed_exec(self):
         ms = int(self.interval_spin.get())
         print(f"Ejecución continua: un ciclo cada {ms} ms")
+        code = self.code_space.get("1.0", tk.END)
+        # Obtener solo líneas de código ensamblador limpias (sin comentarios, sin etiquetas)
+        raw_lines = [line for line in code.splitlines() if line.strip()]
+        parser = Parser()
+        try:
+            instructions = parser.parse(raw_lines)
+            # Usar el atributo .text (o .raw_line) de cada instrucción si existe, o reconstruir la línea limpia
+            # Preferimos usar el texto original limpio, sin PC ni formato extra
+            program_lines = []
+            for instr in instructions:
+                # Si el objeto Instruction tiene un atributo con la línea original, úsalo
+                if hasattr(instr, "raw_line"):
+                    program_lines.append(instr.raw_line)
+                elif hasattr(instr, "text"):
+                    program_lines.append(instr.text)
+                else:
+                    # Como fallback, usar el opcode y los operandos
+                    program_lines.append(instr.opcode + " " + " ".join(str(x) for x in instr.operands))
+            # Validar que todas las instrucciones sean válidas
+            if not program_lines or any(not instr.is_valid() for instr in instructions):
+                print("Error: El parser generó instrucciones inválidas o vacías.")
+                return
+        except Exception as e:
+            print(f"Error al parsear el código: {e}")
+            return
 
-        self._parse_code_from_text()
+        try:
+            manager = SimulatorManager(program_lines, active_indices=self.active_indices)
+        except Exception as e:
+            print(f"Error al inicializar el simulador: {e}")
+            return
+
+        for i, idx in enumerate(self.active_indices):
+            cpu_name = manager.cpu_names[idx]
+            try:
+                manager.cpus[i].load_program(program_lines)
+                manager.cpus[i].run(modo="full", delay_seg=ms/1000.0)
+                metrics = manager.cpus[i].metrics
+                print(f"\n--- Métricas para {cpu_name} ---")
+                print(f"Ciclos totales: {metrics.ciclos_totales}")
+                print(f"Instrucciones retiradas: {metrics.instrucciones_retiradas}")
+                print(f"CPI: {metrics.ciclos_totales / metrics.instrucciones_retiradas if metrics.instrucciones_retiradas else 0:.2f}")
+                print(f"Branches totales: {metrics.branches_totales}")
+                print(f"Branches acertados: {metrics.branches_acertados}")
+                if metrics.branches_totales:
+                    precision = (metrics.branches_acertados / metrics.branches_totales) * 100
+                else:
+                    precision = 0.0
+                print(f"Precisión del predictor: {precision:.2f}%")
+            except Exception as e:
+                print(f"Error al ejecutar {cpu_name}: {e}")
 
     def _run_full_exec(self):
         print("Ejecutar hasta el final")
@@ -280,6 +331,8 @@ class RiscVSimulatorApp(tk.Tk):
             return
 
         self.active_views = new_selection
+        # Guardar los índices seleccionados
+        self.active_indices = [i for i, v in enumerate(new_selection) if v]
         self._history = {1: deque(maxlen=10), 2: deque(maxlen=10)}
         self._refresh_history_window()
         self._refresh_sim_views()
@@ -401,18 +454,6 @@ class RiscVSimulatorApp(tk.Tk):
         tk.Label(self.code_frame, text="Código RISC-V", font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
         self.code_space = tk.Text(self.code_frame, width=30)
         self.code_space.pack(expand=True, fill="both", padx=5, pady=5)
-    
-    def _parse_code_from_text(self):
-        code = self.code_space.get("1.0", tk.END)
-        lines = [line for line in code.splitlines() if line.strip()]
-        parser = Parser()
-        try:
-            instructions = parser.parse(lines)
-            print("Resultado del parser:")
-            for instr in instructions:
-                print(instr)
-        except Exception as e:
-            print(f"Error al parsear el código: {e}")
 
 
     """

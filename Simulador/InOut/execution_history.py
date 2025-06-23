@@ -6,10 +6,12 @@ class ExecutionHistory:
     """
     Buffer circular para almacenar las últimas ejecuciones de procesadores.
     Cada entrada contiene las métricas y la configuración del procesador.
+    El tamaño del buffer depende de la cantidad de procesadores activos.
     """
     def __init__(self, json_filename="execution_history.json", num_procs=1):
         self.json_path = os.path.join(os.path.dirname(__file__), json_filename)
-        self.max_entries = 10 * num_procs
+        self.num_procs = num_procs
+        self.max_entries = 10 * self.num_procs
         self.buffer = self._load_history()
 
     def _load_history(self):
