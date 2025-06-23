@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 # Importación de vistas
 from .sim_view import ALL_VIEWS
 from .view_status import ViewStatus
+from collections import deque
 
 
 class RiscVSimulatorApp(tk.Tk):
@@ -13,15 +14,22 @@ class RiscVSimulatorApp(tk.Tk):
         self.title("Simulador RISC-V")
 
         try:
-            self.state("zoomed")          # Windows / X11
+            self.state("zoomed")
         except tk.TclError:
-            self.attributes("-zoomed", True)  # fallback en algunos Tk
+            self.attributes("-zoomed", True)
 
 
         self.minsize(width=1500, height=600)
 
         self.active_views = [True, True, False, False]
         self._tabs = {}
+
+        self._sim_names = [
+            "Sim 1 (sin unidad de riesgos)",
+            "Sim 2 (con unidad de riesgos )",
+            "Sim 3 (con predicción de saltos)",
+            "Sim 4 (con unidad de riesgos con predicción de saltos)"
+        ]
 
         self._create_menu_bar()
         self._create_toolbar()
@@ -54,6 +62,13 @@ class RiscVSimulatorApp(tk.Tk):
         self.view_status_2.pack(fill="both", expand=True)
 
         self._refresh_sim_views()
+
+        self._history = {1: deque(maxlen=10), 2: deque(maxlen=10)}  # últimas 10 por sim
+        self._history_win = None
+
+    # PRUEBA DE HISTORIAL - Borrar despues
+        #self.update_history(1, 1, 0, 0, 0, 0, 0)
+        #self.update_history(2, 0, 0, 0, 0, 0, 0)
 
     """
     ======================================================================
@@ -160,22 +175,40 @@ class RiscVSimulatorApp(tk.Tk):
         else:
             print(f"Sim {sim_number} no está activo o no existe.")
 
+    def update_history(self, sim_number: int,
+                       ciclos, instrucciones, cpi,
+                       branches, branches_ok, precision):
+        """
+        Registra una nueva línea de métricas para el simulador indicado
+        (sim_number: 1 ó 2). Mantiene sólo las 10 más recientes.
+        """
+        if sim_number not in (1, 2):
+            return
+
+        entry = (f"Cic:{ciclos}  Inst:{instrucciones}  "
+                 f"CPI:{cpi:.2f}  B:{branches}/{branches_ok}  "
+                 f"Prec:{precision:.1f}%")
+        self._history[sim_number].appendleft(entry)  # guarda lo nuevo arriba
+        self._refresh_history_window()
+
     """
     ======================================================================
                              Menú de configuración
     ======================================================================
     """
 
-
     def _create_menu_bar(self):
         menu_bar = tk.Menu(self)
 
+        # ── Configuración ────────────────────────────────────────────
         config_menu = tk.Menu(menu_bar, tearoff=0)
-        config_menu.add_command(
-            label="Opciones de configuración",
-            command=self._open_config_window
-        )
+        config_menu.add_command(label="Opciones de configuración",
+                                command=self._open_config_window)
         menu_bar.add_cascade(label="Configuración", menu=config_menu)
+
+        # ── Historial ────────────────────────────────────────────────
+        menu_bar.add_command(label="Historial",
+                             command=self._open_history_window)
 
         self.config(menu=menu_bar)
 
@@ -243,8 +276,70 @@ class RiscVSimulatorApp(tk.Tk):
             return
 
         self.active_views = new_selection
+        self._history = {1: deque(maxlen=10), 2: deque(maxlen=10)}
+        self._refresh_history_window()
         self._refresh_sim_views()
         window.destroy()
+
+    def _open_history_window(self):
+        """Muestra (o trae al frente) la ventana de historial."""
+        if self._history_win and self._history_win.winfo_exists():
+            self._history_win.deiconify()
+            return
+
+        win = tk.Toplevel(self)
+        win.title("Historial de métricas (últimas 10)")
+        win.geometry("700x260")
+        win.resizable(True, True)
+        self._history_win = win
+
+        # ---- Canvas + scrollbar para poder crecer verticalmente ----
+        canvas = tk.Canvas(win, borderwidth=0)
+        vbar = tk.Scrollbar(win, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=vbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        vbar.pack(side="right", fill="y")
+
+        holder = tk.Frame(canvas)
+        holder.bind("<Configure>",
+                    lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=holder, anchor="nw")
+
+        # ---- Dos columnas (una por vista) --------------------------
+        vistas_activas = [i for i, v in enumerate(self.active_views) if v]
+        nombre_sim_1 = self._sim_names[vistas_activas[0]]
+        nombre_sim_2 = self._sim_names[vistas_activas[1]]
+
+        self._hist_frames = {
+            1: tk.LabelFrame(holder, text=nombre_sim_1, font=("Arial", 10, "bold")),
+            2: tk.LabelFrame(holder, text=nombre_sim_2, font=("Arial", 10, "bold"))
+        }
+
+        self._hist_frames[1].grid(row=0, column=0, sticky="nw", padx=10, pady=5)
+        self._hist_frames[2].grid(row=0, column=1, sticky="nw", padx=10, pady=5)
+
+        # contenedores de labels para refresco rápido
+        self._hist_labels = {1: [], 2: []}
+        self._refresh_history_window()
+
+    def _refresh_history_window(self):
+        """Redibuja las dos columnas si la ventana existe."""
+        if not (self._history_win and self._history_win.winfo_exists()):
+            return
+
+        for sim in (1, 2):
+            # borra labels viejos
+            for lbl in self._hist_labels[sim]:
+                lbl.destroy()
+            self._hist_labels[sim].clear()
+
+            # crea labels con el contenido actual
+            for i, line in enumerate(self._history[sim]):
+                lbl = tk.Label(self._hist_frames[sim], text=line, anchor="w",
+                               font=("Courier", 9))
+                lbl.grid(row=i, column=0, sticky="w")
+                self._hist_labels[sim].append(lbl)
 
     """
     ======================================================================
@@ -279,16 +374,18 @@ class RiscVSimulatorApp(tk.Tk):
         # e) Reset
         tk.Button(bar, text="Reset", command=self._reset_simulation).pack(side="left", padx=2)
 
-        """PRUEBA HIGHLIGHT - Borrar despues"""
+        """PRUEBA HIGHLIGHT - Borrar despues
 
         tk.Button(bar, text="Test H1", command=self.highlight_test).pack(side="left")
         tk.Button(bar, text="Test H2", command=lambda: self.clear_highlight_for_sim(1)).pack(side="left")
-
-    '''PRUEBA HIGHLIGHT - Borrar despues'''
+        """
+        
+    '''PRUEBA HIGHLIGHT - Borrar despues
     def highlight_test(self):
         """Prueba de resaltado en la vista 1."""
         self.highlight_for_sim(1, "alu")
         self.highlight_for_sim(1, "register_file")
+    '''
 
 
     """
