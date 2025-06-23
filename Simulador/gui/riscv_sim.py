@@ -5,6 +5,8 @@ from .sim_view import ALL_VIEWS
 from .view_status import ViewStatus
 from collections import deque
 
+from InOut.parser import Parser
+
 
 class RiscVSimulatorApp(tk.Tk):
     """Ventana principal del simulador RISC-V."""
@@ -86,6 +88,8 @@ class RiscVSimulatorApp(tk.Tk):
     def _start_timed_exec(self):
         ms = int(self.interval_spin.get())
         print(f"Ejecución continua: un ciclo cada {ms} ms")
+
+        self._parse_code_from_text()
 
     def _run_full_exec(self):
         print("Ejecutar hasta el final")
@@ -397,6 +401,18 @@ class RiscVSimulatorApp(tk.Tk):
         tk.Label(self.code_frame, text="Código RISC-V", font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
         self.code_space = tk.Text(self.code_frame, width=30)
         self.code_space.pack(expand=True, fill="both", padx=5, pady=5)
+    
+    def _parse_code_from_text(self):
+        code = self.code_space.get("1.0", tk.END)
+        lines = [line for line in code.splitlines() if line.strip()]
+        parser = Parser()
+        try:
+            instructions = parser.parse(lines)
+            print("Resultado del parser:")
+            for instr in instructions:
+                print(instr)
+        except Exception as e:
+            print(f"Error al parsear el código: {e}")
 
 
     """
