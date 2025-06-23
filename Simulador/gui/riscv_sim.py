@@ -75,6 +75,13 @@ class RiscVSimulatorApp(tk.Tk):
         self._step_initialized = False
         self._step_program_lines = None
 
+        # Control de ejecución rítmica
+        self._timed_exec_running = False
+        self._timed_exec_after_id = None
+        self._timed_exec_manager = None
+        self._timed_exec_program_lines = None
+        self._timed_exec_delay = None
+
     # PRUEBA DE HISTORIAL - Borrar despues
         #self.update_history(1, 1, 0, 0, 0, 0, 0)
         #self.update_history(2, 0, 0, 0, 0, 0, 0)
@@ -179,10 +186,13 @@ class RiscVSimulatorApp(tk.Tk):
                 print(f"Error al ejecutar {cpu_name}: {e}")
 
     def _start_timed_exec(self):
+        # Si ya está corriendo la ejecución rítmica, no hacer nada
+        if self._timed_exec_running:
+            return
+
         ms = int(self.interval_spin.get())
         print(f"Ejecución rítmica: un ciclo cada {ms} ms")
         code = self.code_space.get("1.0", tk.END)
-        # Obtener solo líneas de código ensamblador limpias (sin comentarios, sin etiquetas)
         raw_lines = [line for line in code.splitlines() if line.strip()]
         parser = Parser()
         try:
@@ -203,17 +213,28 @@ class RiscVSimulatorApp(tk.Tk):
             return
 
         try:
-            manager = SimulatorManager(program_lines, active_indices=self.active_indices)
+            self._timed_exec_manager = SimulatorManager(program_lines, active_indices=self.active_indices)
+            for cpu in self._timed_exec_manager.cpus:
+                cpu.load_program(program_lines)
+            self._timed_exec_program_lines = program_lines
         except Exception as e:
             print(f"Error al inicializar el simulador: {e}")
             return
 
+        self._timed_exec_running = True
+        self._timed_exec_delay = ms
+        self._timed_exec_step()  # inicia la ejecución rítmica
+
+    def _timed_exec_step(self):
+        if not self._timed_exec_running:
+            return
+
+        finished_all = True
         for view_idx, sim_idx in enumerate(self.active_indices):
-            cpu_name = manager.cpu_names[sim_idx]
-            cpu = manager.cpus[view_idx]
+            cpu_name = self._timed_exec_manager.cpu_names[sim_idx]
+            cpu = self._timed_exec_manager.cpus[view_idx]
             try:
-                cpu.load_program(program_lines)
-                cpu.run(modo="delay", delay_seg=ms/1000.0)
+                finished = cpu.run_one_cycle()
                 metrics = cpu.metrics
 
                 ciclos = metrics.ciclos_totales
@@ -238,23 +259,35 @@ class RiscVSimulatorApp(tk.Tk):
                 elif hasattr(cpu, "pc"):
                     pc = cpu.pc
 
-                print(f"\n--- Métricas para {cpu_name} ---")
-                print(f"Ciclos totales: {ciclos}")
-                print(f"Instrucciones retiradas: {inst}")
-                print(f"CPI: {cpi:.2f}")
-                print(f"Branches totales: {branch_total}")
-                print(f"Branches acertados: {branch_acertados}")
                 if metrics.branches_totales:
                     precision = (metrics.branches_acertados / metrics.branches_totales) * 100
                 else:
                     precision = 0.0
-                print(f"Precisión del predictor: {precision:.2f}%")
 
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
                 self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
 
+                if not finished:
+                    finished_all = False
+
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
+
+        if not finished_all:
+            # Programar el siguiente ciclo
+            self._timed_exec_after_id = self.after(self._timed_exec_delay, self._timed_exec_step)
+        else:
+            self._timed_exec_running = False
+            self._timed_exec_after_id = None
+            print("Ejecución rítmica finalizada.")
+
+    def _stop_timed_exec(self):
+        print("Detener ejecución continua")
+        # Solo afecta si está corriendo la ejecución rítmica (delay)
+        if self._timed_exec_running and self._timed_exec_after_id is not None:
+            self.after_cancel(self._timed_exec_after_id)
+            self._timed_exec_after_id = None
+        self._timed_exec_running = False
 
     def _run_full_exec(self):
         code = self.code_space.get("1.0", tk.END)
@@ -331,12 +364,11 @@ class RiscVSimulatorApp(tk.Tk):
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
 
-    def _stop_timed_exec(self):
-        print("Detener ejecución continua")
-
     def _reset_simulation(self):
         """Reinicia la simulación, limpiando el código y el estado de las vistas."""
         print("Reiniciar simulación")
+        # Detener ejecución rítmica si está corriendo
+        self._stop_timed_exec()
         # 1. Borra el área de código
         self.code_space.delete("1.0", tk.END)
 
