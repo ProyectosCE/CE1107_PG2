@@ -685,23 +685,26 @@ class RiscVSimulatorApp(tk.Tk):
 
     def highlight_for_sim(self, sim_number: int, unit_tag: str):
         """
-        Resalta en la vista activa que corresponda a sim_number (1..4).
+        Resalta en la vista activa que corresponda a sim_number (1..2).
         Si la vista no está activa, no hace nada.
         """
-        sim_idx = sim_number - 1
-        frame = self._tabs.get(sim_idx)
-        if frame:
-            frame.highlight(unit_tag)
+        # sim_number es 1 o 2, mapea a self.active_indices
+        if 1 <= sim_number <= len(self.active_indices):
+            sim_idx = self.active_indices[sim_number - 1]
+            frame = self._tabs.get(sim_idx)
+            if frame:
+                frame.highlight(unit_tag)
 
     def clear_highlight_for_sim(self, sim_number: int):
         """
-        Limpia el resaltado en la vista activa que corresponda a sim_number (1..4).
+        Limpia el resaltado en la vista activa que corresponda a sim_number (1..2).
         Si la vista no está activa, no hace nada.
         """
-        sim_idx = sim_number - 1
-        frame = self._tabs.get(sim_idx)
-        if frame:
-            frame.clear_highlights()
+        if 1 <= sim_number <= len(self.active_indices):
+            sim_idx = self.active_indices[sim_number - 1]
+            frame = self._tabs.get(sim_idx)
+            if frame:
+                frame.clear_highlights()
 
     def update_system_state_sim(self, view_number: int, ciclo: int, tiempo: float, pc: int):
         """
