@@ -213,6 +213,9 @@ class RiscVSimulatorApp(tk.Tk):
                         "MEM_WB": instr_str(pipe.MEM_WB) if pipe.MEM_WB else "nop"
                     }
                     self.update_pipeline_sim(view_idx+1, pipeline_info, ciclos)
+
+                    # --- Iluminar componentes relevantes SOLO para step ---
+                    self._highlight_pipeline_units_step(view_idx+1, pipe)
                 else:
                     self.update_pipeline_sim(view_idx+1, {
                         "IF_ID": "nop", "ID_EX": "nop", "EX_MEM": "nop", "MEM_WB": "nop"
@@ -1095,3 +1098,73 @@ class RiscVSimulatorApp(tk.Tk):
             self._timed_exec_manager = None
             self._timed_exec_program_lines = None
             self._timed_exec_delay = None
+
+    # --- NUEVO: Highlight para modo STEP (paso a paso) ---
+
+    def _highlight_pipeline_units_step(self, sim_number, pipe):
+        """
+        Ilumina los componentes relevantes según la instrucción en cada etapa del pipeline SOLO para modo step.
+        El highlight se apaga automáticamente tras un breve tiempo.
+        """
+        stage_unit_map = {
+            "IF_ID": ["instruction_mem", "mux_pc", "reg_pc", "adder"],
+            "ID_EX": ["register_file", "reg1", "reg2", "extend"],
+            "EX_MEM": ["alu", "adderPC", "mux_srcB", "mux_ForwardAE", "mux_ForwardBE"],
+            "MEM_WB": ["data_mem", "mux_result", "reg3", "reg4"]
+        }
+        instr_type_map = {
+            "R": ["register_file", "alu", "mux_result"],
+            "I": ["register_file", "extend", "alu", "mux_result"],
+            "S": ["register_file", "extend", "data_mem"],
+            "B": ["register_file", "extend", "adderPC"],
+            "U": ["register_file", "extend", "mux_result"],
+            "J": ["register_file", "extend", "mux_result"],
+            "LW": ["register_file", "extend", "data_mem", "mux_result"],
+            "SW": ["register_file", "extend", "data_mem"],
+        }
+        def get_instr_type(instr):
+            op = getattr(instr, "opcode", "nop")
+            if op in {"add", "sub", "and", "or", "xor", "slt", "sll", "srl", "sra"}:
+                return "R"
+            elif op in {"addi", "andi", "ori", "slti", "slli", "srli", "srai", "jalr"}:
+                return "I"
+            elif op in {"lw"}:
+                return "LW"
+            elif op in {"sw"}:
+                return "SW"
+            elif op in {"beq", "bne", "blt", "bge", "bltu", "bgeu"}:
+                return "B"
+            elif op in {"lui", "auipc"}:
+                return "U"
+            elif op in {"jal"}:
+                return "J"
+            else:
+                return None
+
+        # Limpiar highlights previos SOLO para step (no afecta delay)
+        self.clear_highlight_for_sim(sim_number)
+        # Para cada etapa, iluminar si hay instrucción activa
+        for stage, units in stage_unit_map.items():
+            stage_dict = getattr(pipe, stage, None)
+            if stage_dict and "instr" in stage_dict:
+                instr = stage_dict["instr"]
+                if getattr(instr, "opcode", "nop") != "nop":
+                    for unit in units:
+                        self._highlight_with_auto_clear_step(sim_number, unit)
+                    instr_type = get_instr_type(instr)
+                    if instr_type and instr_type in instr_type_map:
+                        for unit in instr_type_map[instr_type]:
+                            self._highlight_with_auto_clear_step(sim_number, unit)
+
+    def _highlight_with_auto_clear_step(self, sim_number, unit_tag, delay=400):
+        """
+        Ilumina un componente para modo step y lo apaga automáticamente tras 'delay' ms.
+        """
+        self.highlight_for_sim(sim_number, unit_tag)
+        self.after(delay, lambda: self._auto_clear_highlight_step(sim_number, unit_tag))
+
+    def _auto_clear_highlight_step(self, sim_number, unit_tag):
+        """
+        Apaga el highlight de un componente para modo step.
+        """
+        self.clear_highlight_for_sim(sim_number)
