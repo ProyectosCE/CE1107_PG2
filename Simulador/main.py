@@ -15,8 +15,7 @@ parser = Parser()
 program_lines = loader.load_program(program_path)
 instructions = parser.parse(program_lines)
 
-cpu.load_program([str(instr.raw_text) for instr in instructions])
-cpu.run()
+
 
 
 if __name__ == "__main__":
