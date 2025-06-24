@@ -83,6 +83,9 @@ class RiscVSimulatorApp(tk.Tk):
         self._timed_exec_program_lines = None
         self._timed_exec_delay = None
 
+        self._highlight_timers = {}  # {(sim_number, unit_tag): after_id}
+        self._pending_highlights = set()  # {(sim_number, unit_tag)}
+
     # PRUEBA DE HISTORIAL - Borrar despues
         #self.update_history(1, 1, 0, 0, 0, 0, 0)
         #self.update_history(2, 0, 0, 0, 0, 0, 0)
@@ -336,12 +339,64 @@ class RiscVSimulatorApp(tk.Tk):
                 if getattr(instr, "opcode", "nop") != "nop":
                     # Iluminar todos los componentes de la etapa
                     for unit in units:
-                        self.highlight_for_sim(sim_number, unit)
+                        self._highlight_with_auto_clear(sim_number, unit)
                     # Iluminar componentes adicionales según tipo de instrucción
                     instr_type = get_instr_type(instr)
                     if instr_type and instr_type in instr_type_map:
                         for unit in instr_type_map[instr_type]:
-                            self.highlight_for_sim(sim_number, unit)
+                            self._highlight_with_auto_clear(sim_number, unit)
+
+    def _highlight_with_auto_clear(self, sim_number, unit_tag, delay_on=400, delay_off=400):
+        """
+        Ilumina un componente, lo mantiene encendido delay_on ms, lo apaga delay_off ms,
+        y luego repite el ciclo si sigue activo.
+        Solo aplica el ciclo en modo delay.
+        """
+        key = (sim_number, unit_tag)
+        # Si ya está pendiente de highlight, no lo enciendas de nuevo hasta que termine el ciclo
+        if self._timed_exec_running and key in self._pending_highlights:
+            return
+        self.highlight_for_sim(sim_number, unit_tag)
+        
+        # Programa apagado después de delay_on ms
+        self._highlight_timers[key] = self.after(
+            delay_on,
+            lambda: self._auto_clear_and_reschedule(sim_number, unit_tag, delay_on, delay_off)
+        )
+
+    def _auto_clear_and_reschedule(self, sim_number, unit_tag, delay_on, delay_off):
+        """
+        Apaga el highlight y, si sigue en modo delay, espera delay_off antes de volver a encenderlo.
+        """
+        key = (sim_number, unit_tag)
+        frame = self._tabs.get(sim_number - 1)
+        if frame:
+            frame.clear_highlight(unit_tag)
+        if key in self._highlight_timers:
+            self.after_cancel(self._highlight_timers[key])
+            del self._highlight_timers[key]
+        # Marca como pendiente para evitar doble highlight
+        if self._timed_exec_running:
+            self._pending_highlights.add(key)
+            # Espera delay_off antes de volver a encender si sigue en modo delay
+            self._highlight_timers[key] = self.after(
+                delay_off,
+                lambda: self._resume_highlight(sim_number, unit_tag, delay_on, delay_off)
+            )
+        else:
+            if key in self._pending_highlights:
+                self._pending_highlights.remove(key)
+
+    def _resume_highlight(self, sim_number, unit_tag, delay_on, delay_off):
+        """
+        Vuelve a encender el highlight si sigue en modo delay.
+        """
+        key = (sim_number, unit_tag)
+        if self._timed_exec_running:
+            self._pending_highlights.discard(key)
+            self._highlight_with_auto_clear(sim_number, unit_tag, delay_on, delay_off)
+        else:
+            self._pending_highlights.discard(key)
 
     def _timed_exec_step(self):
         if not self._timed_exec_running:

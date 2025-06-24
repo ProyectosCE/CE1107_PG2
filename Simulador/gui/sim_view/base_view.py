@@ -76,3 +76,11 @@ class BaseSimView(tk.Frame, ABC):
         for block in self.units.values():
             if block.tag:
                 self.canvas.itemconfig(block.tag, fill="lightgray")
+
+    def clear_highlight(self, unit):
+        """
+        Apaga el highlight de un solo bloque identificado por unit (unit_tag).
+        """
+        block = self.units.get(unit)
+        if block and block.tag:
+            self.canvas.itemconfig(block.tag, fill="lightgray")
