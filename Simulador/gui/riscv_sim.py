@@ -7,6 +7,7 @@ from collections import deque
 
 from InOut.parser import Parser
 from core.simulator_manager import SimulatorManager
+from InOut.execution_history import ExecutionHistory
 
 
 class RiscVSimulatorApp(tk.Tk):
@@ -316,6 +317,10 @@ class RiscVSimulatorApp(tk.Tk):
             print(f"Error al inicializar el simulador: {e}")
             return
 
+        # --- Integración con ExecutionHistory ---
+        # Usar el mismo objeto de historial que el manager
+        history = manager.history
+
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = manager.cpu_names[sim_idx]
             cpu = manager.cpus[view_idx]
@@ -360,6 +365,15 @@ class RiscVSimulatorApp(tk.Tk):
 
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
                 self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
+
+                # --- Guardar en historial de ejecuciones ---
+                # Se guarda el nombre, métricas y configuración del procesador
+                config = manager.cpu_configs[sim_idx]
+                history.add_execution(
+                    processor_name=cpu_name,
+                    metrics=metrics,
+                    config=config
+                )
 
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
