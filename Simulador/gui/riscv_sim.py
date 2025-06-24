@@ -179,6 +179,13 @@ class RiscVSimulatorApp(tk.Tk):
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
                 self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
 
+                # --- Actualizar registros en tiempo real ---
+                if hasattr(cpu, "registers") and hasattr(cpu.registers, "dump"):
+                    reg_dict = cpu.registers.dump()
+                    self.update_registers_sim(view_idx+1, reg_dict)
+                else:
+                    self.update_registers_sim(view_idx+1, {f"x{i}": 0 for i in range(32)})
+
                 # Si terminó, reiniciar para el próximo step
                 if finished:
                     print(f"{cpu_name} ha finalizado la ejecución.")
@@ -284,6 +291,13 @@ class RiscVSimulatorApp(tk.Tk):
 
                 self.update_metrics_sim(view_idx+1, ciclos, inst, cpi, branch_total, branch_acertados, precision)
                 self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
+
+                # --- Actualizar registros en tiempo real ---
+                if hasattr(cpu, "registers") and hasattr(cpu.registers, "dump"):
+                    reg_dict = cpu.registers.dump()
+                    self.update_registers_sim(view_idx+1, reg_dict)
+                else:
+                    self.update_registers_sim(view_idx+1, {f"x{i}": 0 for i in range(32)})
 
                 if not finished:
                     finished_all = False
