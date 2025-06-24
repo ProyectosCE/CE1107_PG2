@@ -365,6 +365,7 @@ class RiscVSimulatorApp(tk.Tk):
         # --- Integración con ExecutionHistory ---
         history = manager.history
 
+        # Ejecutar cada procesador y actualizar interfaz
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = manager.cpu_names[sim_idx]
             cpu = manager.cpus[view_idx]
@@ -427,6 +428,17 @@ class RiscVSimulatorApp(tk.Tk):
 
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
+
+        # --- Actualizar memoria en la interfaz gráfica después de la ejecución ---
+        for view_idx, sim_idx in enumerate(self.active_indices):
+            cpu = manager.cpus[view_idx]
+            # dump devuelve {direccion: valor}
+            if hasattr(cpu, "data_mem") and hasattr(cpu.data_mem, "dump"):
+                mem_dict = cpu.data_mem.dump()
+                self.update_memory_sim(view_idx+1, mem_dict)
+            else:
+                # Si no hay memoria, muestra todo en cero
+                self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
 
     def _reset_simulation(self):
         """Reinicia la simulación, limpiando el código y el estado de las vistas."""
