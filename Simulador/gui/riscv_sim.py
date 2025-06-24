@@ -193,6 +193,28 @@ class RiscVSimulatorApp(tk.Tk):
                 else:
                     self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
 
+                # --- Actualizar pipeline en tiempo real ---
+                if hasattr(cpu, "pipeline"):
+                    pipe = cpu.pipeline
+                    def instr_str(stage):
+                        instr = stage.get("instr", None)
+                        pc_val = stage.get("pc", None)
+                        s = str(instr) if instr is not None else "nop"
+                        if pc_val is not None:
+                            s += f" @ PC={pc_val:#x}"
+                        return s
+                    pipeline_info = {
+                        "IF_ID": instr_str(pipe.IF_ID) if pipe.IF_ID else "nop",
+                        "ID_EX": instr_str(pipe.ID_EX) if pipe.ID_EX else "nop",
+                        "EX_MEM": instr_str(pipe.EX_MEM) if pipe.EX_MEM else "nop",
+                        "MEM_WB": instr_str(pipe.MEM_WB) if pipe.MEM_WB else "nop"
+                    }
+                    self.update_pipeline_sim(view_idx+1, pipeline_info, ciclos)
+                else:
+                    self.update_pipeline_sim(view_idx+1, {
+                        "IF_ID": "nop", "ID_EX": "nop", "EX_MEM": "nop", "MEM_WB": "nop"
+                    }, ciclos)
+
                 # Si terminó, reiniciar para el próximo step
                 if finished:
                     print(f"{cpu_name} ha finalizado la ejecución.")
@@ -313,6 +335,28 @@ class RiscVSimulatorApp(tk.Tk):
                 else:
                     self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
 
+                # --- Actualizar pipeline en tiempo real ---
+                if hasattr(cpu, "pipeline"):
+                    pipe = cpu.pipeline
+                    def instr_str(stage):
+                        instr = stage.get("instr", None)
+                        pc_val = stage.get("pc", None)
+                        s = str(instr) if instr is not None else "nop"
+                        if pc_val is not None:
+                            s += f" @ PC={pc_val:#x}"
+                        return s
+                    pipeline_info = {
+                        "IF_ID": instr_str(pipe.IF_ID) if pipe.IF_ID else "nop",
+                        "ID_EX": instr_str(pipe.ID_EX) if pipe.ID_EX else "nop",
+                        "EX_MEM": instr_str(pipe.EX_MEM) if pipe.EX_MEM else "nop",
+                        "MEM_WB": instr_str(pipe.MEM_WB) if pipe.MEM_WB else "nop"
+                    }
+                    self.update_pipeline_sim(view_idx+1, pipeline_info, ciclos)
+                else:
+                    self.update_pipeline_sim(view_idx+1, {
+                        "IF_ID": "nop", "ID_EX": "nop", "EX_MEM": "nop", "MEM_WB": "nop"
+                    }, ciclos)
+
                 if not finished:
                     finished_all = False
 
@@ -380,6 +424,7 @@ class RiscVSimulatorApp(tk.Tk):
         history = manager.history
 
         # Ejecutar cada procesador y actualizar interfaz
+        pipeline_states = []
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = manager.cpu_names[sim_idx]
             cpu = manager.cpus[view_idx]
@@ -440,19 +485,47 @@ class RiscVSimulatorApp(tk.Tk):
                 else:
                     self.update_registers_sim(view_idx+1, {f"x{i}": 0 for i in range(32)})
 
+                # --- Guardar estado del pipeline para mostrarlo luego ---
+                if hasattr(cpu, "pipeline"):
+                    pipe = cpu.pipeline
+                    # Para cada etapa, mostrar la instrucción y el PC si existe
+                    def instr_str(stage):
+                        instr = stage.get("instr", None)
+                        pc = stage.get("pc", None)
+                        if instr is not None:
+                            s = str(instr)
+                        else:
+                            s = "nop"
+                        if pc is not None:
+                            s += f" @ PC={pc:#x}"
+                        return s
+                    pipeline_info = {
+                        "IF_ID": instr_str(pipe.IF_ID) if pipe.IF_ID else "nop",
+                        "ID_EX": instr_str(pipe.ID_EX) if pipe.ID_EX else "nop",
+                        "EX_MEM": instr_str(pipe.EX_MEM) if pipe.EX_MEM else "nop",
+                        "MEM_WB": instr_str(pipe.MEM_WB) if pipe.MEM_WB else "nop"
+                    }
+                    pipeline_states.append((view_idx+1, pipeline_info, ciclos))
+                else:
+                    pipeline_states.append((view_idx+1, {
+                        "IF_ID": "nop", "ID_EX": "nop", "EX_MEM": "nop", "MEM_WB": "nop"
+                    }, ciclos))
+
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
 
         # --- Actualizar memoria en la interfaz gráfica después de la ejecución ---
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu = manager.cpus[view_idx]
-            # dump devuelve {direccion: valor}
             if hasattr(cpu, "data_mem") and hasattr(cpu.data_mem, "dump"):
                 mem_dict = cpu.data_mem.dump()
                 self.update_memory_sim(view_idx+1, mem_dict)
             else:
-                # Si no hay memoria, muestra todo en cero
                 self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
+
+        # --- Actualizar pipeline en la interfaz gráfica después de la ejecución ---
+        for view_number, pipeline_info, ciclo in pipeline_states:
+            self.update_pipeline_sim(view_number, pipeline_info, ciclo)
 
     def _reset_simulation(self):
         """Reinicia la simulación, limpiando el código y el estado de las vistas."""

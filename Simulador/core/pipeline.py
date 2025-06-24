@@ -51,12 +51,45 @@ class Pipeline:
         """
         # Representan los registros entre etapas
         # cada uno es un diccionario con al menos una clave 'instr' que contiene la instrucción
-        self.IF_ID = None
-        self.ID_EX = None
-        self.EX_MEM = None
-        self.MEM_WB = None
+        self._IF_ID = None
+        self._ID_EX = None
+        self._EX_MEM = None
+        self._MEM_WB = None
         self.completed = False
         self.cycles = 0
+
+    # --- Propiedades para acceso externo seguro ---
+    @property
+    def IF_ID(self):
+        return self._IF_ID
+
+    @IF_ID.setter
+    def IF_ID(self, value):
+        self._IF_ID = value
+
+    @property
+    def ID_EX(self):
+        return self._ID_EX
+
+    @ID_EX.setter
+    def ID_EX(self, value):
+        self._ID_EX = value
+
+    @property
+    def EX_MEM(self):
+        return self._EX_MEM
+
+    @EX_MEM.setter
+    def EX_MEM(self, value):
+        self._EX_MEM = value
+
+    @property
+    def MEM_WB(self):
+        return self._MEM_WB
+
+    @MEM_WB.setter
+    def MEM_WB(self, value):
+        self._MEM_WB = value
 
     def init_pipeline(self):
         """
