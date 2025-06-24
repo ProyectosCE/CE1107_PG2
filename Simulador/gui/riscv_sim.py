@@ -349,7 +349,6 @@ class RiscVSimulatorApp(tk.Tk):
             return
 
         # --- Integración con ExecutionHistory ---
-        # Usar el mismo objeto de historial que el manager
         history = manager.history
 
         for view_idx, sim_idx in enumerate(self.active_indices):
@@ -398,7 +397,6 @@ class RiscVSimulatorApp(tk.Tk):
                 self.update_system_state_sim(view_idx+1, ciclos, tiempo, pc)
 
                 # --- Guardar en historial de ejecuciones ---
-                # Se guarda el nombre, métricas y configuración del procesador
                 config = manager.cpu_configs[sim_idx]
                 history.add_execution(
                     processor_name=cpu_name,
@@ -406,15 +404,12 @@ class RiscVSimulatorApp(tk.Tk):
                     config=config
                 )
 
-                # --- Imprimir todos los registros al finalizar ---
-                print(f"\n--- Estado de registros para {cpu_name} ---")
-                # Se asume que el objeto cpu tiene un atributo 'registers' con método 'dump'
+                # --- Actualizar registros en la interfaz gráfica ---
                 if hasattr(cpu, "registers") and hasattr(cpu.registers, "dump"):
                     reg_dict = cpu.registers.dump()
-                    for reg, val in reg_dict.items():
-                        print(f"{reg}: {val}")
+                    self.update_registers_sim(view_idx+1, reg_dict)
                 else:
-                    print("No se pudo obtener el estado de los registros para este procesador.")
+                    self.update_registers_sim(view_idx+1, {f"x{i}": 0 for i in range(32)})
 
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
