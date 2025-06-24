@@ -129,6 +129,7 @@ class RiscVSimulatorApp(tk.Tk):
                 print(f"Error al inicializar el simulador: {e}")
                 return
 
+        all_finished = True
         for view_idx, sim_idx in enumerate(self.active_indices):
             cpu_name = self._step_manager.cpu_names[sim_idx]
             cpu = self._step_manager.cpus[view_idx]
@@ -181,10 +182,26 @@ class RiscVSimulatorApp(tk.Tk):
                 # Si terminó, reiniciar para el próximo step
                 if finished:
                     print(f"{cpu_name} ha finalizado la ejecución.")
-                    self._step_initialized = False
-
+                else:
+                    all_finished = False
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
+                all_finished = False
+
+        # --- Guardar historial solo si TODOS han terminado ---
+        if all_finished:
+            history = ExecutionHistory()
+            for view_idx, sim_idx in enumerate(self.active_indices):
+                cpu_name = self._step_manager.cpu_names[sim_idx]
+                cpu = self._step_manager.cpus[view_idx]
+                config = self._step_manager.cpu_configs[sim_idx]
+                metrics = cpu.metrics
+                history.add_execution(
+                    processor_name=cpu_name,
+                    metrics=metrics,
+                    config=config
+                )
+            self._step_initialized = False
 
     def _start_timed_exec(self):
         # Si ya está corriendo la ejecución rítmica, no hacer nada
@@ -273,6 +290,7 @@ class RiscVSimulatorApp(tk.Tk):
 
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
+                finished_all = False
 
         if not finished_all:
             # Programar el siguiente ciclo
@@ -281,6 +299,19 @@ class RiscVSimulatorApp(tk.Tk):
             self._timed_exec_running = False
             self._timed_exec_after_id = None
             print("Ejecución rítmica finalizada.")
+
+            # --- Guardar historial solo si TODOS han terminado ---
+            history = ExecutionHistory()
+            for view_idx, sim_idx in enumerate(self.active_indices):
+                cpu_name = self._timed_exec_manager.cpu_names[sim_idx]
+                cpu = self._timed_exec_manager.cpus[view_idx]
+                config = self._timed_exec_manager.cpu_configs[sim_idx]
+                metrics = cpu.metrics
+                history.add_execution(
+                    processor_name=cpu_name,
+                    metrics=metrics,
+                    config=config
+                )
 
     def _stop_timed_exec(self):
         print("Detener ejecución continua")
