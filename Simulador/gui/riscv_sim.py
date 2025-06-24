@@ -615,6 +615,36 @@ class RiscVSimulatorApp(tk.Tk):
             self._history_win.deiconify()
             return
 
+        # --- Leer historial desde archivo y filtrar por procesadores activos ---
+        history = ExecutionHistory()
+        all_entries = history.get_history()
+
+        # Obtener los nombres de los procesadores seleccionados actualmente
+        vistas_activas = [i for i, v in enumerate(self.active_views) if v]
+        # Cambia a usar la variable de clase CPU_NAMES
+        nombre_proc_1 = SimulatorManager.CPU_NAMES[vistas_activas[0]]
+        nombre_proc_2 = SimulatorManager.CPU_NAMES[vistas_activas[1]]
+
+        # Filtrar las últimas 10 ejecuciones para cada procesador seleccionado
+        def filter_last_n(entries, proc_name, n=10):
+            filtered = [e for e in reversed(entries) if e["processor"] == proc_name]
+            return filtered[:n]
+
+        filtered_1 = filter_last_n(all_entries, nombre_proc_1)
+        filtered_2 = filter_last_n(all_entries, nombre_proc_2)
+
+        # Guardar en self._history para que _refresh_history_window lo use
+        def format_entry(entry):
+            m = entry["metrics"]
+            return (f"Cic:{m['ciclos_totales']}  Inst:{m['instrucciones_retiradas']}  "
+                    f"CPI:{m['cpi']:.2f}  B:{m['branches_totales']}/{m['branches_acertados']}  "
+                    f"Prec:{(m['branch_accuracy'] if m['branch_accuracy'] is not None else 0):.1f}%")
+
+        self._history = {
+            1: [format_entry(e) for e in filtered_1],
+            2: [format_entry(e) for e in filtered_2]
+        }
+
         win = tk.Toplevel(self)
         win.title("Historial de métricas (últimas 10)")
         win.geometry("700x260")
@@ -635,7 +665,6 @@ class RiscVSimulatorApp(tk.Tk):
         canvas.create_window((0, 0), window=holder, anchor="nw")
 
         # ---- Dos columnas (una por vista) --------------------------
-        vistas_activas = [i for i, v in enumerate(self.active_views) if v]
         nombre_sim_1 = self._sim_names[vistas_activas[0]]
         nombre_sim_2 = self._sim_names[vistas_activas[1]]
 

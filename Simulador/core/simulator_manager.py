@@ -19,6 +19,14 @@ class SimulatorManager:
     2: Con predicción de saltos
     3: Completo (unidad de riesgos + predicción de saltos)
     """
+    # --- Agrega la variable de clase para los nombres ---
+    CPU_NAMES = [
+        "Procesador Básico (sin hazards ni predicción)",
+        "Procesador Sin Hazards (con forwarding)",
+        "Procesador Sin Predictor (con hazards)",
+        "Procesador Completo"
+    ]
+
     def __init__(self, program_lines: list[str], active_indices=None):
         self.program_lines = program_lines
         if active_indices is None:
@@ -33,12 +41,8 @@ class SimulatorManager:
             ProcessorNoPredictor,   # 2
             Processor               # 3
         ]
-        self.cpu_names = [
-            "Procesador Básico (sin hazards ni predicción)",
-            "Procesador Sin Hazards (con forwarding)",
-            "Procesador Sin Predictor (con hazards)",
-            "Procesador Completo"
-        ]
+        # Cambia a usar la variable de clase
+        self.cpu_names = SimulatorManager.CPU_NAMES
         self.cpu_configs = [
             {"Hazards": False, "Predictor": False},
             {"Hazards": False, "Predictor": True},
