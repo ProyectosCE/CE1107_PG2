@@ -186,6 +186,13 @@ class RiscVSimulatorApp(tk.Tk):
                 else:
                     self.update_registers_sim(view_idx+1, {f"x{i}": 0 for i in range(32)})
 
+                # --- Actualizar memoria en tiempo real ---
+                if hasattr(cpu, "data_mem") and hasattr(cpu.data_mem, "dump"):
+                    mem_dict = cpu.data_mem.dump()
+                    self.update_memory_sim(view_idx+1, mem_dict)
+                else:
+                    self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
+
                 # Si terminó, reiniciar para el próximo step
                 if finished:
                     print(f"{cpu_name} ha finalizado la ejecución.")
@@ -298,6 +305,13 @@ class RiscVSimulatorApp(tk.Tk):
                     self.update_registers_sim(view_idx+1, reg_dict)
                 else:
                     self.update_registers_sim(view_idx+1, {f"x{i}": 0 for i in range(32)})
+
+                # --- Actualizar memoria en tiempo real ---
+                if hasattr(cpu, "data_mem") and hasattr(cpu.data_mem, "dump"):
+                    mem_dict = cpu.data_mem.dump()
+                    self.update_memory_sim(view_idx+1, mem_dict)
+                else:
+                    self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
 
                 if not finished:
                     finished_all = False
