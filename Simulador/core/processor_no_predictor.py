@@ -102,15 +102,31 @@ class ProcessorNoPredictor:
             if_id  = self.pipeline.IF_ID
             id_ex  = self.id_stage.decode(if_id)
             ex_mem = self.ex_stage.execute(id_ex)
+            # --- Agrega control_signals para instrucciones que escriben en registros ---
+            opcode = ex_mem["instr"].opcode
+            regwrite_opcodes = {
+                "add", "sub", "and", "or", "xor", "slt", "sll", "srl", "sra",
+                "addi", "andi", "ori", "slti", "slli", "srli", "srai",
+                "lui", "auipc", "jal", "jalr", "lw"
+            }
+            ex_mem["control_signals"] = {}
+            if opcode in regwrite_opcodes:
+                ex_mem["control_signals"]["RegWrite"] = True
+            if opcode == "lw":
+                ex_mem["control_signals"]["MemToReg"] = True
+            if opcode == "lw":
+                ex_mem["control_signals"]["MemRead"] = True
+            if opcode == "sw":
+                ex_mem["control_signals"]["MemWrite"] = True
+
             last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
 
-            # (flush ya se maneja arriba)
-
             mem_wb = self.mem_stage.access(ex_mem)
+            # --- Propaga control_signals a mem_wb ---
+            mem_wb["control_signals"] = ex_mem.get("control_signals", {})
+
             self.wb_stage.write_back(mem_wb)
             self.metrics.track_writeback(mem_wb["instr"])
-
-            
 
             # --- Modo de ejecución ---
             if modo == "step":
@@ -168,11 +184,29 @@ class ProcessorNoPredictor:
         if_id  = self.pipeline.IF_ID
         id_ex  = self.id_stage.decode(if_id)
         ex_mem = self.ex_stage.execute(id_ex)
+        # --- Agrega control_signals para instrucciones que escriben en registros ---
+        opcode = ex_mem["instr"].opcode
+        regwrite_opcodes = {
+            "add", "sub", "and", "or", "xor", "slt", "sll", "srl", "sra",
+            "addi", "andi", "ori", "slti", "slli", "srli", "srai",
+            "lui", "auipc", "jal", "jalr", "lw"
+        }
+        ex_mem["control_signals"] = {}
+        if opcode in regwrite_opcodes:
+            ex_mem["control_signals"]["RegWrite"] = True
+        if opcode == "lw":
+            ex_mem["control_signals"]["MemToReg"] = True
+        if opcode == "lw":
+            ex_mem["control_signals"]["MemRead"] = True
+        if opcode == "sw":
+            ex_mem["control_signals"]["MemWrite"] = True
+
         self._last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
 
-        # (flush ya se maneja arriba)
-
         mem_wb = self.mem_stage.access(ex_mem)
+        # --- Propaga control_signals a mem_wb ---
+        mem_wb["control_signals"] = ex_mem.get("control_signals", {})
+
         self.wb_stage.write_back(mem_wb)
         self.metrics.track_writeback(mem_wb["instr"])
 

@@ -406,6 +406,16 @@ class RiscVSimulatorApp(tk.Tk):
                     config=config
                 )
 
+                # --- Imprimir todos los registros al finalizar ---
+                print(f"\n--- Estado de registros para {cpu_name} ---")
+                # Se asume que el objeto cpu tiene un atributo 'registers' con método 'dump'
+                if hasattr(cpu, "registers") and hasattr(cpu.registers, "dump"):
+                    reg_dict = cpu.registers.dump()
+                    for reg, val in reg_dict.items():
+                        print(f"{reg}: {val}")
+                else:
+                    print("No se pudo obtener el estado de los registros para este procesador.")
+
             except Exception as e:
                 print(f"Error al ejecutar {cpu_name}: {e}")
 
