@@ -279,6 +279,70 @@ class RiscVSimulatorApp(tk.Tk):
         self._timed_exec_delay = ms
         self._timed_exec_step()  # inicia la ejecución rítmica
 
+    def _highlight_pipeline_units(self, sim_number, pipe):
+        """
+        Ilumina los componentes relevantes según la instrucción en cada etapa del pipeline.
+        Apaga los que ya no están activos.
+        """
+        # Mapeo de etapas a posibles componentes por tipo de instrucción
+        # Puedes ajustar los nombres según los tags definidos en cada SimView
+        stage_unit_map = {
+            "IF_ID": ["instruction_mem", "mux_pc", "reg_pc", "adder"],
+            "ID_EX": ["register_file", "reg1", "reg2", "extend"],
+            "EX_MEM": ["alu", "adderPC", "mux_srcB", "mux_ForwardAE", "mux_ForwardBE"],
+            "MEM_WB": ["data_mem", "mux_result", "reg3", "reg4"]
+        }
+
+        # Mapeo de tipo de instrucción a componentes adicionales
+        instr_type_map = {
+            "R": ["register_file", "alu", "mux_result"],
+            "I": ["register_file", "extend", "alu", "mux_result"],
+            "S": ["register_file", "extend", "data_mem"],
+            "B": ["register_file", "extend", "adderPC"],
+            "U": ["register_file", "extend", "mux_result"],
+            "J": ["register_file", "extend", "mux_result"],
+            "LW": ["register_file", "extend", "data_mem", "mux_result"],
+            "SW": ["register_file", "extend", "data_mem"],
+        }
+
+        # Helper para determinar tipo de instrucción
+        def get_instr_type(instr):
+            op = getattr(instr, "opcode", "nop")
+            if op in {"add", "sub", "and", "or", "xor", "slt", "sll", "srl", "sra"}:
+                return "R"
+            elif op in {"addi", "andi", "ori", "slti", "slli", "srli", "srai", "jalr"}:
+                return "I"
+            elif op in {"lw"}:
+                return "LW"
+            elif op in {"sw"}:
+                return "SW"
+            elif op in {"beq", "bne", "blt", "bge", "bltu", "bgeu"}:
+                return "B"
+            elif op in {"lui", "auipc"}:
+                return "U"
+            elif op in {"jal"}:
+                return "J"
+            else:
+                return None
+
+        # Primero, limpiar todos los highlights
+        self.clear_highlight_for_sim(sim_number)
+
+        # Para cada etapa, iluminar si hay instrucción activa
+        for stage, units in stage_unit_map.items():
+            stage_dict = getattr(pipe, stage, None)
+            if stage_dict and "instr" in stage_dict:
+                instr = stage_dict["instr"]
+                if getattr(instr, "opcode", "nop") != "nop":
+                    # Iluminar todos los componentes de la etapa
+                    for unit in units:
+                        self.highlight_for_sim(sim_number, unit)
+                    # Iluminar componentes adicionales según tipo de instrucción
+                    instr_type = get_instr_type(instr)
+                    if instr_type and instr_type in instr_type_map:
+                        for unit in instr_type_map[instr_type]:
+                            self.highlight_for_sim(sim_number, unit)
+
     def _timed_exec_step(self):
         if not self._timed_exec_running:
             return
@@ -335,7 +399,7 @@ class RiscVSimulatorApp(tk.Tk):
                 else:
                     self.update_memory_sim(view_idx+1, {addr: 0 for addr in range(0, 4096, 4)})
 
-                # --- Actualizar pipeline en tiempo real ---
+                # --- Actualizar pipeline y resaltar bloques en tiempo real ---
                 if hasattr(cpu, "pipeline"):
                     pipe = cpu.pipeline
                     def instr_str(stage):
@@ -352,6 +416,9 @@ class RiscVSimulatorApp(tk.Tk):
                         "MEM_WB": instr_str(pipe.MEM_WB) if pipe.MEM_WB else "nop"
                     }
                     self.update_pipeline_sim(view_idx+1, pipeline_info, ciclos)
+
+                    # Iluminar todos los componentes relevantes según la instrucción en cada etapa
+                    self._highlight_pipeline_units(view_idx+1, pipe)
                 else:
                     self.update_pipeline_sim(view_idx+1, {
                         "IF_ID": "nop", "ID_EX": "nop", "EX_MEM": "nop", "MEM_WB": "nop"
@@ -384,14 +451,6 @@ class RiscVSimulatorApp(tk.Tk):
                     metrics=metrics,
                     config=config
                 )
-
-    def _stop_timed_exec(self):
-        print("Detener ejecución continua")
-        # Solo afecta si está corriendo la ejecución rítmica (delay)
-        if self._timed_exec_running and self._timed_exec_after_id is not None:
-            self.after_cancel(self._timed_exec_after_id)
-            self._timed_exec_after_id = None
-        self._timed_exec_running = False
 
     def _run_full_exec(self):
         code = self.code_space.get("1.0", tk.END)
@@ -488,16 +547,12 @@ class RiscVSimulatorApp(tk.Tk):
                 # --- Guardar estado del pipeline para mostrarlo luego ---
                 if hasattr(cpu, "pipeline"):
                     pipe = cpu.pipeline
-                    # Para cada etapa, mostrar la instrucción y el PC si existe
                     def instr_str(stage):
                         instr = stage.get("instr", None)
-                        pc = stage.get("pc", None)
-                        if instr is not None:
-                            s = str(instr)
-                        else:
-                            s = "nop"
-                        if pc is not None:
-                            s += f" @ PC={pc:#x}"
+                        pc_val = stage.get("pc", None)
+                        s = str(instr) if instr is not None else "nop"
+                        if pc_val is not None:
+                            s += f" @ PC={pc_val:#x}"
                         return s
                     pipeline_info = {
                         "IF_ID": instr_str(pipe.IF_ID) if pipe.IF_ID else "nop",
@@ -506,6 +561,9 @@ class RiscVSimulatorApp(tk.Tk):
                         "MEM_WB": instr_str(pipe.MEM_WB) if pipe.MEM_WB else "nop"
                     }
                     pipeline_states.append((view_idx+1, pipeline_info, ciclos))
+
+                    # Iluminar todos los componentes relevantes según la instrucción en cada etapa
+                    self._highlight_pipeline_units(view_idx+1, pipe)
                 else:
                     pipeline_states.append((view_idx+1, {
                         "IF_ID": "nop", "ID_EX": "nop", "EX_MEM": "nop", "MEM_WB": "nop"
@@ -966,3 +1024,16 @@ class RiscVSimulatorApp(tk.Tk):
         else:
             if self.view_status_2.winfo_ismapped():
                 self.view_status_2.pack_forget()
+
+    def _stop_timed_exec(self):
+        """
+        Detiene la ejecución rítmica (delay) si está corriendo.
+        """
+        if self._timed_exec_running:
+            self._timed_exec_running = False
+            if self._timed_exec_after_id is not None:
+                self.after_cancel(self._timed_exec_after_id)
+                self._timed_exec_after_id = None
+            self._timed_exec_manager = None
+            self._timed_exec_program_lines = None
+            self._timed_exec_delay = None
