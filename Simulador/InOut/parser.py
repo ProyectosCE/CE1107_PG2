@@ -99,7 +99,7 @@ class Parser:
             try:
                 instr = Instruction(clean_line, current_address)
                 if not instr.is_valid():
-                    raise ValueError(f"Instrucción inválida: '{clean_line}' en PC={current_address}")
+                    raise ValueError(f"Instrucción inválida o no soportada: '{clean_line}' en PC={current_address}")
                 self.instructions.append(instr)
                 current_address += 4
             except Exception as e:

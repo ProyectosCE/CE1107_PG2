@@ -39,5 +39,6 @@ class InstructionDecodeBasic:
             "imm": instr.imm,
             "rd": instr.rd,
             "rs1": instr.rs1,
-            "rs2": instr.rs2
+            "rs2": instr.rs2,
+            # "control_signals": {}  # Si quieres agregar señales de control aquí
         }

@@ -71,16 +71,36 @@ class ProcessorNoHazards:
 
             # 3. EX
             ex_mem = self.ex_stage.execute(id_ex)
+            # --- Agrega control_signals para instrucciones que escriben en registros ---
+            opcode = ex_mem["instr"].opcode
+            regwrite_opcodes = {
+                "add", "sub", "and", "or", "xor", "slt", "sll", "srl", "sra",
+                "addi", "andi", "ori", "slti", "slli", "srli", "srai",
+                "lui", "auipc", "jal", "jalr", "lw"
+            }
+            ex_mem["control_signals"] = {}
+            if opcode in regwrite_opcodes:
+                ex_mem["control_signals"]["RegWrite"] = True
+            if opcode == "lw":
+                ex_mem["control_signals"]["MemToReg"] = True
+            if opcode == "lw":
+                ex_mem["control_signals"]["MemRead"] = True
+            if opcode == "sw":
+                ex_mem["control_signals"]["MemWrite"] = True
+
             last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
 
             # 4. MEM
             mem_wb = self.mem_stage.access(ex_mem)
+            # --- Asegura que los datos escritos en memoria sean enteros ---
+            if ex_mem["instr"].opcode == "sw":
+                if not isinstance(mem_wb.get("mem_data", 0), int):
+                    mem_wb["mem_data"] = 0
+            mem_wb["control_signals"] = ex_mem.get("control_signals", {})
 
             # 5. WB
             self.wb_stage.write_back(mem_wb)
             self.metrics.track_writeback(mem_wb["instr"])
-
-            
 
             # --- Modo de ejecución ---
             if modo == "step":
@@ -96,3 +116,74 @@ class ProcessorNoHazards:
 
         print("\n Programa finalizado (ProcessorNoHazards). Pipeline vacío.")
         self.metrics.display()
+    
+    def run_one_cycle(self):
+        """Avanza un ciclo del pipeline. Retorna True si terminó, False si no."""
+        if not hasattr(self, "_step_pipeline_initialized") or not self._step_pipeline_initialized:
+            self.metrics.start_timer()
+            self._step_start_time = time.perf_counter()
+            self.pipeline.init_pipeline()
+            self._step_pipeline_initialized = True
+            self._last_ex_mem = None
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+
+        self.metrics.tick()
+
+        # --- CONTROL DE SALTOS (sin predicción) ---
+        if hasattr(self, "_last_ex_mem") and self._last_ex_mem and self._last_ex_mem["instr"].opcode in {"beq", "bne", "jal"}:
+            if self._last_ex_mem.get("branch_taken", False):
+                target = self._last_ex_mem.get("target_address")
+                if target is not None:
+                    self.if_stage.jump(target)
+
+        # 1. IF
+        fetched = self.if_stage.fetch()
+        instr = fetched["instr"]
+        pc = fetched["pc"]
+        self.pipeline.step(instr, pc)
+
+        # 2. ID
+        if_id = self.pipeline.IF_ID
+        id_ex = self.id_stage.decode(if_id)
+
+        # 3. EX
+        ex_mem = self.ex_stage.execute(id_ex)
+        # --- Agrega control_signals para instrucciones que escriben en registros ---
+        opcode = ex_mem["instr"].opcode
+        regwrite_opcodes = {
+            "add", "sub", "and", "or", "xor", "slt", "sll", "srl", "sra",
+            "addi", "andi", "ori", "slti", "slli", "srli", "srai",
+            "lui", "auipc", "jal", "jalr", "lw"
+        }
+        ex_mem["control_signals"] = {}
+        if opcode in regwrite_opcodes:
+            ex_mem["control_signals"]["RegWrite"] = True
+        if opcode == "lw":
+            ex_mem["control_signals"]["MemToReg"] = True
+        if opcode == "lw":
+            ex_mem["control_signals"]["MemRead"] = True
+        if opcode == "sw":
+            ex_mem["control_signals"]["MemWrite"] = True
+
+        self._last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
+
+        # 4. MEM
+        mem_wb = self.mem_stage.access(ex_mem)
+        # --- Propaga control_signals a mem_wb ---
+        mem_wb["control_signals"] = ex_mem.get("control_signals", {})
+
+        # 5. WB
+        self.wb_stage.write_back(mem_wb)
+        self.metrics.track_writeback(mem_wb["instr"])
+
+        # Actualiza el tiempo de ejecución en cada ciclo
+        if hasattr(self, "_step_start_time"):
+            self.metrics.elapsed_time = time.perf_counter() - self._step_start_time
+
+        if self.pipeline.is_done():
+            self.metrics.stop_timer()
+            return True
+        return False
