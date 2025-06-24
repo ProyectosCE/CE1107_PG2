@@ -92,7 +92,10 @@ class ProcessorNoHazards:
 
             # 4. MEM
             mem_wb = self.mem_stage.access(ex_mem)
-            # --- Propaga control_signals a mem_wb ---
+            # --- Asegura que los datos escritos en memoria sean enteros ---
+            if ex_mem["instr"].opcode == "sw":
+                if not isinstance(mem_wb.get("mem_data", 0), int):
+                    mem_wb["mem_data"] = 0
             mem_wb["control_signals"] = ex_mem.get("control_signals", {})
 
             # 5. WB

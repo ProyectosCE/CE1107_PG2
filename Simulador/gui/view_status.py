@@ -160,18 +160,24 @@ class ViewStatus(tk.Frame):
         self.memory_text.delete('1.0', tk.END)
 
         # --- Normalizamos y ordenamos --------------------------------------
+        # Siempre mostrar el rango completo de memoria (0 a 4092, 1024 palabras)
+        MEM_SIZE_WORDS = 1024
+        ADDR_START = 0
+        ADDR_END = (MEM_SIZE_WORDS - 1) * 4
+
+        # Convertir a diccionario si es iterable de pares
         if isinstance(mem, dict):
-            ordered = sorted(mem.items())
+            mem_dict = dict(mem)
         else:
             try:
-                ordered = sorted(mem, key=lambda p: p[0])
-            except Exception:  # formato inesperado
-                ordered = []
+                mem_dict = dict(mem)
+            except Exception:
+                mem_dict = {}
 
-        # --- Mostramos ------------------------------------------------------
-        for addr, val in ordered:
-            self.memory_text.insert(tk.END,
-                                    f"{addr:08X}: {val:08X}\n")
+        # --- Mostramos el rango completo, aunque no todas las direcciones tengan datos ---
+        for addr in range(ADDR_START, ADDR_END + 1, 4):
+            val = mem_dict.get(addr, 0)
+            self.memory_text.insert(tk.END, f"{addr:08X}: {val:08X}\n")
 
         self.memory_text.config(state='disabled')  # evita edición casual
 

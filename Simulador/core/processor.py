@@ -101,6 +101,11 @@ class Processor:
             # (flush ya se maneja arriba)
 
             mem_wb = self.mem_stage.access(ex_mem)
+            # --- Asegura que los datos escritos en memoria sean enteros ---
+            if ex_mem["instr"].opcode == "sw":
+                if not isinstance(mem_wb.get("mem_data", 0), int):
+                    mem_wb["mem_data"] = 0
+
             self.wb_stage.write_back(mem_wb)
 
             self.metrics.track_writeback(mem_wb["instr"])

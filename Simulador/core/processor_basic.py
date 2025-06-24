@@ -82,7 +82,11 @@ class ProcessorBasic:
             last_ex_mem = ex_mem  # Guardar para el siguiente ciclo
 
             mem_wb = self.mem_stage.access(ex_mem)
-            # --- Propaga control_signals a mem_wb ---
+            # --- Asegura que los datos escritos en memoria sean enteros ---
+            if ex_mem["instr"].opcode == "sw":
+                # Si por error se pasa un objeto Instruction, convierte a int 0
+                if not isinstance(mem_wb.get("mem_data", 0), int):
+                    mem_wb["mem_data"] = 0
             mem_wb["control_signals"] = ex_mem.get("control_signals", {})
 
             self.wb_stage.write_back(mem_wb)
