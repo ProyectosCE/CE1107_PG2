@@ -5,40 +5,50 @@ class ViewStatus(tk.Frame):
     def __init__(self, parent, view_name="Vista", *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.view_name = view_name
+        self._latest_memory_data = []  # para mantener datos
+
+        # ───── TOOLBAR SUPERIOR ─────
+        toolbar = tk.Frame(self, relief=tk.RAISED, bd=2)
+        toolbar.pack(fill="x", padx=5, pady=2)
+
+        self.btn_estado = tk.Button(toolbar, text="Estado Sistema", command=self._show_main_only)
+        self.btn_estado.pack(side="left", padx=(0, 2))
+
+        self.btn_memoria = tk.Button(toolbar, text="Memoria", command=self._show_memory_only)
+        self.btn_memoria.pack(side="left", padx=2)
+
+        # ───── Panel principal ─────
+        self._main_panel = tk.Frame(self)
+        self._main_panel.pack(fill="both", expand=True)
 
         # ───── 1) Estado del sistema ─────
-        estado_frame = tk.LabelFrame(
-            self, text=f"Estado del Sistema:\n{self.view_name}", font=("Arial", 10, "bold"))
-        estado_frame.pack(fill="x", padx=5, pady=5)
+        self.estado_lblf = tk.LabelFrame(
+            self._main_panel, text=f"Estado del Sistema:\n{self.view_name}", font=("Arial", 10, "bold"))
+        self.estado_lblf.pack(fill="x", padx=5, pady=5)
 
-        self.ciclo_label = tk.Label(estado_frame, text="Ciclo: 0")
+        self.ciclo_label = tk.Label(self.estado_lblf, text="Ciclo: 0")
         self.ciclo_label.pack(anchor="w", padx=5)
-        self.tiempo_label = tk.Label(estado_frame, text="Tiempo: 0.0 s")
+        self.tiempo_label = tk.Label(self.estado_lblf, text="Tiempo: 0.0 s")
         self.tiempo_label.pack(anchor="w", padx=5)
-        self.pc_label = tk.Label(estado_frame, text="PC: 0x00000000")
+        self.pc_label = tk.Label(self.estado_lblf, text="PC: 0x00000000")
         self.pc_label.pack(anchor="w", padx=5)
 
         # ───── 1.5) Pipeline ─────
-        pipeline_frame = tk.LabelFrame(self, text="Pipeline (etapas)", font=("Arial", 10, "bold"))
+        pipeline_frame = tk.LabelFrame(self._main_panel, text="Pipeline (etapas)", font=("Arial", 10, "bold"))
         pipeline_frame.pack(fill="x", padx=5, pady=5)
 
-        # Frame para contener Text + scrollbar horizontal
         pipeline_container = tk.Frame(pipeline_frame)
         pipeline_container.pack(fill="x", expand=True, padx=5, pady=5)
 
-        # Text widget con wrap="none" para permitir scroll horizontal
         self.pipeline_text = tk.Text(pipeline_container, height=7, font=("Courier", 9), state="disabled", wrap="none")
         self.pipeline_text.pack(side="top", fill="x", expand=True)
 
-        # Scrollbar horizontal
         hscroll_pipeline = tk.Scrollbar(pipeline_container, orient="horizontal", command=self.pipeline_text.xview)
         hscroll_pipeline.pack(side="bottom", fill="x")
-
-        # Configurar el text para usar la scrollbar horizontal
         self.pipeline_text.configure(xscrollcommand=hscroll_pipeline.set)
 
         # ───── 2) Métricas de Simulación ─────
-        metrica_frame = tk.LabelFrame(self, text="Métricas de Simulación", font=("Arial", 10, "bold"))
+        metrica_frame = tk.LabelFrame(self._main_panel, text="Métricas de Simulación", font=("Arial", 10, "bold"))
         metrica_frame.pack(fill="x", padx=5, pady=(0, 5))
 
         self.metric_labels = {
@@ -53,11 +63,9 @@ class ViewStatus(tk.Frame):
         for lbl in self.metric_labels.values():
             lbl.pack(anchor="w", padx=5)
 
-
-        # ───── 3) Registros con scroll vertical ─────
-        reg_lblf = tk.LabelFrame(self, text="Registros", font=("Arial", 10, "bold"))
+        # ───── 3) Registros ─────
+        reg_lblf = tk.LabelFrame(self._main_panel, text="Registros", font=("Arial", 10, "bold"))
         reg_lblf.pack(fill="both", expand=False, padx=5, pady=5)
-
         reg_lblf.columnconfigure(0, weight=1)
         reg_lblf.rowconfigure(0, weight=1)
 
@@ -69,13 +77,7 @@ class ViewStatus(tk.Frame):
         vscroll_regs.grid(row=0, column=1, sticky="ns")
 
         reg_inner = tk.Frame(reg_canvas)
-        # Actualiza el scrollregion cuando el tamaño del contenido cambie
-        reg_inner.bind(
-            "<Configure>",
-            lambda e: reg_canvas.configure(scrollregion=reg_canvas.bbox("all"))
-        )
-
-        # Ventana interna en canvas
+        reg_inner.bind("<Configure>", lambda e: reg_canvas.configure(scrollregion=reg_canvas.bbox("all")))
         reg_canvas.create_window((0, 0), window=reg_inner, anchor="nw")
 
         self.reg_labels = []
@@ -84,18 +86,18 @@ class ViewStatus(tk.Frame):
             lbl.pack(fill="x", padx=5, pady=1)
             self.reg_labels.append(lbl)
 
-        # ───── 4) Memoria con scroll vertical y horizontal ─────
-        mem_lblf = tk.LabelFrame(self, text="Memoria", font=("Arial", 10, "bold"))
-        mem_lblf.pack(fill="both", expand=True, padx=5, pady=5)
+        # ───── 4) Panel de Memoria ─────
+        self._memory_panel = tk.LabelFrame(self, text="Memoria", font=("Arial", 10, "bold"))
+        self._memory_panel.pack_forget()  # se oculta al inicio
 
-        mem_lblf.columnconfigure(0, weight=1)
-        mem_lblf.rowconfigure(0, weight=1)
+        self._memory_panel.columnconfigure(0, weight=1)
+        self._memory_panel.rowconfigure(0, weight=1)
 
-        hscroll_mem = tk.Scrollbar(mem_lblf, orient="horizontal")
-        vscroll_mem = tk.Scrollbar(mem_lblf, orient="vertical")
+        hscroll_mem = tk.Scrollbar(self._memory_panel, orient="horizontal")
+        vscroll_mem = tk.Scrollbar(self._memory_panel, orient="vertical")
 
         self.memory_text = tk.Text(
-            mem_lblf, wrap="none", font=("Courier", 9),
+            self._memory_panel, wrap="none", font=("Courier", 9),
             xscrollcommand=hscroll_mem.set, yscrollcommand=vscroll_mem.set
         )
 
@@ -105,6 +107,20 @@ class ViewStatus(tk.Frame):
 
         hscroll_mem.config(command=self.memory_text.xview)
         vscroll_mem.config(command=self.memory_text.yview)
+
+    # ------------------- Métodos para cambiar vista -------------------
+
+    def _show_main_only(self):
+        self._memory_panel.pack_forget()
+        self._main_panel.pack(fill="both", expand=True)
+        self.btn_estado.config(relief=tk.SUNKEN)
+        self.btn_memoria.config(relief=tk.RAISED)
+
+    def _show_memory_only(self):
+        self._main_panel.pack_forget()
+        self._memory_panel.pack(fill="both", expand=True)
+        self.btn_estado.config(relief=tk.RAISED)
+        self.btn_memoria.config(relief=tk.SUNKEN)
 
     # ------------------- API pública -------------------
 
@@ -186,6 +202,4 @@ class ViewStatus(tk.Frame):
 
     def set_view_name(self, name):
         self.view_name = name
-        # Primer hijo es LabelFrame de estado
-        estado_lblf = next(iter(self.children.values()))
-        estado_lblf.config(text=f"Estado del Sistema:\n{name}")
+        self.estado_lblf.config(text=f"Estado del Sistema:\n{name}")
